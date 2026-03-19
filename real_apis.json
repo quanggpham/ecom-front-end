@@ -1,0 +1,150 @@
+{
+  "create": {
+    "method": "POST",
+    "url": "/api/v1/products"
+  },
+  "get all": {
+    "method": "GET",
+    "url": "/api/v1/users?size=2&page=1"
+  },
+  "get detail": {
+    "method": "GET",
+    "url": "/api/v1/products/3"
+  },
+  "update": {
+    "method": "PUT",
+    "url": "/api/v1/users/13"
+  },
+  "delete": {
+    "method": "DELETE",
+    "url": "/api/v1/products/1"
+  },
+  "get all (search)": {
+    "method": "GET",
+    "url": "/api/v1/products"
+  },
+  "add to cart": {
+    "method": "POST",
+    "url": "/api/v1/carts/add"
+  },
+  "get cart": {
+    "method": "GET",
+    "url": "/api/v1/carts"
+  },
+  "update quantity": {
+    "method": "PUT",
+    "url": "/api/v1/carts/item"
+  },
+  "del item": {
+    "method": "DELETE",
+    "url": "/api/v1/carts/item?productId=10"
+  },
+  "clear cart": {
+    "method": "DELETE",
+    "url": "/api/v1/carts/clear"
+  },
+  "register": {
+    "method": "POST",
+    "url": "/api/v1/auth/register"
+  },
+  "login": {
+    "method": "POST",
+    "url": "/api/v1/auth/login"
+  },
+  "checkout": {
+    "method": "POST",
+    "url": "/api/v1/orders"
+  },
+  "get by id": {
+    "method": "GET",
+    "url": "/api/v1/orders/33"
+  },
+  "cancel order": {
+    "method": "PUT",
+    "url": "/api/v1/orders/cancel/37"
+  },
+  "get by user id": {
+    "method": "GET",
+    "url": "/api/v1/orders"
+  },
+  "admin get by id": {
+    "method": "GET",
+    "url": "/api/v1/admin/orders/100"
+  },
+  "admin get all": {
+    "method": "GET",
+    "url": "/api/v1/admin/orders?page=0&size=2"
+  },
+  "admin update status": {
+    "method": "PUT",
+    "url": "/api/v1/admin/orders/12"
+  },
+  "upload": {
+    "method": "POST",
+    "url": "/api/v1/media/upload"
+  },
+  "overview": {
+    "method": "GET",
+    "url": "/api/v1/admin/statistics/overview?startDate=2026-02-05&endDate=2026-02-10&status=COMPLETED"
+  },
+  "revenue by date": {
+    "method": "GET",
+    "url": "/api/v1/admin/statistics/revenue-by-date"
+  },
+  "top products": {
+    "method": "GET",
+    "url": "/api/v1/admin/statistics/top-products?startDate=2026-02-05&endDate=2026-02-10&limit=5"
+  },
+  "chatbot stream": {
+    "method": "GET",
+    "url": "/api/v1/ai/chat/stream?message=Tôi đang nóng có món gì ăn cho mát người không?"
+  },
+  "non stream": {
+    "method": "GET",
+    "url": "/api/v1/ai/chat"
+  },
+  "create user": {
+    "method": "POST",
+    "url": "/api/v1/users"
+  },
+  "detele by id": {
+    "method": "DELETE",
+    "url": "/api/v1/users/13"
+  },
+  "get details by id": {
+    "method": "GET",
+    "url": "/api/v1/users/13"
+  },
+  "create fixed coupon": {
+    "method": "POST",
+    "url": "/api/v1/coupons"
+  },
+  "create percentage coupon": {
+    "method": "POST",
+    "url": "/api/v1/coupons"
+  },
+  "update coupon": {
+    "method": "PUT",
+    "url": "/api/v1/coupons/1"
+  },
+  "get all coupons": {
+    "method": "GET",
+    "url": "/api/v1/coupons?page=1&size=10"
+  },
+  "get coupon by id": {
+    "method": "GET",
+    "url": "/api/v1/coupons/4"
+  },
+  "delete coupon": {
+    "method": "DELETE",
+    "url": "/api/v1/coupons/2"
+  },
+  "calculate discount": {
+    "method": "GET",
+    "url": "/api/v1/coupons/calculate?code=SALE20PT&amount=200000"
+  },
+  "change coupon status": {
+    "method": "PATCH",
+    "url": "/api/v1/coupons/1/status?active=false"
+  }
+}
