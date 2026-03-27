@@ -17,16 +17,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ordersApi } from '@/lib/api';
+import { ordersApi, reviewsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import type { Order } from '@/types';
+import type { Order, ReviewableOrder } from '@/types';
+import { CreateReviewModal } from '@/components/ecommerce/CreateReviewModal';
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock; bgColor: string }> = {
   PENDING: { label: 'Chờ xử lý', color: 'bg-yellow-100 text-yellow-700', icon: Clock, bgColor: 'border-yellow-200' },
   CONFIRMED: { label: 'Đã xác nhận', color: 'bg-blue-100 text-blue-700', icon: CheckCircle, bgColor: 'border-blue-200' },
   SHIPPING: { label: 'Đang giao', color: 'bg-purple-100 text-purple-700', icon: Truck, bgColor: 'border-purple-200' },
   COMPLETED: { label: 'Hoàn thành', color: 'bg-green-100 text-green-700', icon: CheckCircle, bgColor: 'border-green-200' },
-  DELIVERED: { label: 'Đã giao', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle, bgColor: 'border-emerald-200' },
   CANCELLED: { label: 'Đã hủy', color: 'bg-red-100 text-red-700', icon: XCircle, bgColor: 'border-red-200' },
 };
 
@@ -42,13 +42,37 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [reviewableItems, setReviewableItems] = useState<Set<number>>(new Set());
+  const [reviewableOrdersList, setReviewableOrdersList] = useState<ReviewableOrder[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('ALL');
+  const [reviewModalData, setReviewModalData] = useState<{ id: number; name: string } | null>(null);
   const pageSize = 10;
+
+  const tabs = [
+    { key: 'ALL', label: 'Tất cả' },
+    { key: 'PENDING', label: 'Chờ xử lý' },
+    { key: 'CONFIRMED', label: 'Đã xác nhận' },
+    { key: 'SHIPPING', label: 'Đang giao' },
+    { key: 'COMPLETED', label: 'Hoàn thành' },
+    { key: 'CANCELLED', label: 'Đã hủy' },
+    { key: 'REVIEWABLE', label: 'Chờ đánh giá' },
+  ];
   const { toast } = useToast();
 
   const fetchOrders = async () => {
+    if (activeTab === 'REVIEWABLE') {
+      setOrders([]);
+      setTotalPages(1);
+      return; 
+    }
+
     setIsLoading(true);
     try {
-      const response = await ordersApi.getMyOrders({ page: currentPage, size: pageSize });
+      const response = await ordersApi.getMyOrders({ 
+        page: currentPage, 
+        size: pageSize,
+        ...(activeTab !== 'ALL' ? { status: activeTab } : {})
+      });
       setOrders(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);
@@ -63,9 +87,49 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
     }
   };
 
+  const fetchReviewableItems = async () => {
+    try {
+      const res = await reviewsApi.getReviewableOrders();
+      setReviewableOrdersList(res.data || []);
+      const items = new Set<number>();
+      res.data?.forEach(order => {
+        order.items?.forEach(item => items.add(item.orderItemId));
+      });
+      setReviewableItems(items);
+    } catch {
+      // ignore silently
+    }
+  };
+
+  useEffect(() => {
+    fetchReviewableItems();
+  }, []);
+
   useEffect(() => {
     fetchOrders();
-  }, [currentPage]);
+  }, [currentPage, activeTab]);
+
+  const handleTabChange = (key: string) => {
+    if (key !== activeTab) {
+      setActiveTab(key);
+      setCurrentPage(1);
+    }
+  };
+
+  const handleReviewSuccess = () => {
+    if (reviewModalData) {
+      setReviewableItems(prev => {
+        const next = new Set(prev);
+        next.delete(reviewModalData.id);
+        return next;
+      });
+      setReviewableOrdersList(prev => prev.map(order => ({
+        ...order,
+        items: order.items.filter(i => i.orderItemId !== reviewModalData.id)
+      })).filter(order => order.items.length > 0));
+      setReviewModalData(null);
+    }
+  };
 
   const handleCancelOrder = async (orderId: number) => {
     setCancellingId(orderId);
@@ -126,8 +190,26 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
           </div>
         </div>
 
+        {/* View Tabs */}
+        <div className="flex overflow-x-auto hide-scrollbar border-b mb-6 border-border/50">
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                className={`whitespace-nowrap px-4 py-3 font-medium text-sm transition-colors border-b-2 outline-none ${
+                  isActive ? 'border-amber-600 text-amber-600' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+                }`}
+                onClick={() => handleTabChange(tab.key)}
+              >
+                {tab.label} {tab.key === 'REVIEWABLE' && reviewableItems.size > 0 && `(${reviewableItems.size})`}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Loading */}
-        {isLoading ? (
+        {isLoading && activeTab !== 'REVIEWABLE' ? (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <Card key={i}>
@@ -142,6 +224,52 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
               </Card>
             ))}
           </div>
+        ) : activeTab === 'REVIEWABLE' ? (
+          /* Unreviewed Products List */
+          <div className="space-y-4">
+            {reviewableOrdersList.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-500" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Tuyệt vời!</h3>
+                <p className="text-muted-foreground">Bạn đã đánh giá tất cả sản phẩm đã mua.</p>
+              </div>
+            ) : (
+              reviewableOrdersList.flatMap(order => 
+                order.items.map(item => (
+                  <Card key={item.orderItemId} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      {/* Image */}
+                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                            <Package className="w-6 h-6 text-amber-300" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Info */}
+                      <div>
+                        <div className="font-semibold text-lg">{item.productName}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Đơn hàng #{order.orderId} • {formatDate(order.createdAt)}</div>
+                        <div className="text-sm text-muted-foreground">Số lượng: {item.quantity}</div>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => setReviewModalData({ id: item.orderItemId, name: item.productName })}
+                      className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-none shadow-sm w-full sm:w-auto"
+                    >
+                      Viết đánh giá
+                    </Button>
+                  </Card>
+                ))
+              )
+            )}
+          </div>
         ) : orders.length === 0 ? (
           /* Empty State */
           <div className="text-center py-16">
@@ -150,14 +278,16 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
             </div>
             <h3 className="text-lg font-semibold mb-2">Chưa có đơn hàng nào</h3>
             <p className="text-muted-foreground mb-4">
-              Hãy khám phá thực đơn và đặt món ngay!
+              {activeTab === 'ALL' ? 'Hãy khám phá thực đơn và đặt món ngay!' : 'Không có đơn hàng nào ở trạng thái này.'}
             </p>
-            <Button
-              onClick={onBack}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-            >
-              Khám phá thực đơn
-            </Button>
+            {activeTab === 'ALL' && (
+              <Button
+                onClick={onBack}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+              >
+                Khám phá thực đơn
+              </Button>
+            )}
           </div>
         ) : (
           /* Order List */
@@ -238,15 +368,42 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
                         {/* Items */}
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">Chi tiết đơn hàng</h4>
-                          {order.orderDetails?.map((item) => (
-                            <div key={item.id} className="flex justify-between text-sm">
-                              <div>
-                                <span>{item.name}</span>
-                                <span className="text-muted-foreground"> x{item.quantity}</span>
+                          {order.orderDetails?.map((item) => {
+                            const isCompleted = order.status === 'COMPLETED';
+                            const isReviewable = reviewableItems.has(item.id);
+                            
+                            return (
+                              <div key={item.id} className="flex justify-between items-center text-sm py-2 border-b last:border-0 border-border/50">
+                                <div>
+                                  <div className="flex items-center flex-wrap gap-2">
+                                    <span>{item.name}</span>
+                                    <span className="text-muted-foreground mr-1"> x{item.quantity}</span>
+                                    {isCompleted && (
+                                      <Badge variant={isReviewable ? "outline" : "secondary"} className={isReviewable ? "text-amber-600 border-amber-200 bg-amber-50 text-[10px] h-5 px-1.5" : "bg-green-100 text-green-700 hover:bg-green-100 text-[10px] h-5 px-1.5 border-none"}>
+                                        {isReviewable ? 'Chưa đánh giá' : 'Đã đánh giá'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5 min-w-[100px]">
+                                  <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                                  {isCompleted && isReviewable && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-2"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReviewModalData({ id: item.id, name: item.name });
+                                      }}
+                                    >
+                                      Viết đánh giá
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              <span>{formatCurrency(item.price * item.quantity)}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         <Separator />
@@ -313,6 +470,14 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
           </div>
         )}
       </div>
+      
+      <CreateReviewModal
+        isOpen={!!reviewModalData}
+        onClose={() => setReviewModalData(null)}
+        orderItemId={reviewModalData?.id || 0}
+        productName={reviewModalData?.name || ''}
+        onSuccess={handleReviewSuccess}
+      />
     </section>
   );
 }

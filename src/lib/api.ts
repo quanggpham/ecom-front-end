@@ -19,6 +19,12 @@ import type {
   AddressRequest,
   RevenueData,
   TopProduct,
+  Review,
+  ReviewStats,
+  ReviewResponse,
+  ReviewRequest,
+  ReviewableOrder,
+  ReviewStatus,
 } from '@/types';
 
 // API Base URL - update this if needed
@@ -336,7 +342,7 @@ export const ordersApi = {
     });
   },
 
-  getMyOrders: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  getMyOrders: async (params?: { page?: number; size?: number; status?: string }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -509,6 +515,84 @@ export const mediaApi = {
     }
 
     return data;
+  },
+};
+
+// Reviews API
+export const reviewsApi = {
+  // Public - Lấy review của một sản phẩm
+  getByProduct: async (
+    productId: number, 
+    params?: { rating?: number; page?: number; size?: number; sort?: string }
+  ): Promise<ApiResponse<ReviewResponse>> => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.rating) searchParams.append('rating', String(params.rating));
+      if (params.page !== undefined) searchParams.append('page', String(params.page));
+      if (params.size !== undefined) searchParams.append('size', String(params.size));
+      if (params.sort) searchParams.append('sort', params.sort);
+    }
+    const queryString = searchParams.toString();
+    const endpoint = queryString 
+      ? `/api/v1/products/${productId}/reviews?${queryString}` 
+      : `/api/v1/products/${productId}/reviews`;
+    
+    return fetchApi<ReviewResponse>(endpoint);
+  },
+
+  // Auth - Tạo review mới
+  create: async (data: ReviewRequest): Promise<ApiResponse<Review>> => {
+    return fetchApi<Review>('/api/v1/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Admin/Seller - Trả lời review
+  replyAsSeller: async (reviewId: number, reply: string): Promise<ApiResponse<Review>> => {
+    return fetchApi<Review>(`/api/v1/seller/reviews/${reviewId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ reply }),
+    });
+  },
+
+  // Auth - Lấy DS order item có thể review
+  getReviewableOrders: async (): Promise<ApiResponse<ReviewableOrder[]>> => {
+    return fetchApi<ReviewableOrder[]>('/api/v1/users/me/reviewable-orders');
+  },
+
+  // Admin - Lấy danh sách review cần duyệt
+  getAdminReviews: async (params?: { 
+    productId?: number; 
+    userId?: number; 
+    status?: string; 
+    minReportCount?: number;
+    page?: number; 
+    size?: number;
+    sort?: string;
+  }): Promise<ApiResponse<PaginatedResponse<Review>>> => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const queryString = searchParams.toString();
+    const endpoint = queryString 
+      ? `/api/v1/admin/reviews?${queryString}` 
+      : `/api/v1/admin/reviews`;
+    
+    return fetchApi<PaginatedResponse<Review>>(endpoint);
+  },
+
+  // Admin - Duyệt/Từ chối review
+  updateStatus: async (reviewId: number, status: 'APPROVED' | 'REJECTED', rejectionReason?: string | null): Promise<ApiResponse<Review>> => {
+    return fetchApi<Review>(`/api/v1/admin/reviews/${reviewId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, rejectionReason: rejectionReason || null }),
+    });
   },
 };
 

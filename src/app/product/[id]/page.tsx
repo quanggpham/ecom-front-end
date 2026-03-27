@@ -19,11 +19,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { productsApi } from '@/lib/api';
+import { productsApi, reviewsApi, profileApi } from '@/lib/api';
 import { useCartStore, useAuthStore, useUIStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
-import { Header, Footer, CartDrawer, AuthModal, ChatBot } from '@/components/ecommerce';
-import type { Product } from '@/types';
+import { Header, Footer, CartDrawer, AuthModal, ChatBot, CreateReviewModal } from '@/components/ecommerce';
+import type { Product, ReviewResponse, User } from '@/types';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('vi-VN', {
@@ -32,50 +32,16 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-function getProductRating(id: number) {
-  return {
-    rating: (3.5 + (id % 15) / 10).toFixed(1),
-    count: 50 + (id * 7) % 200,
-  };
-}
-
-// Generate fake reviews based on product id for consistent display
-function getProductReviews(id: number) {
-  const reviewNames = [
-    'Nguyễn Văn An', 'Trần Thị Bình', 'Lê Hoàng Cường', 'Phạm Thị Dung',
-    'Hoàng Minh Đức', 'Vũ Thị Em', 'Đỗ Văn Phúc', 'Bùi Thị Giang',
-  ];
-  const reviewTexts = [
-    'Món ăn rất ngon, đúng hương vị truyền thống. Sẽ đặt lại lần nữa!',
-    'Giao hàng nhanh, đóng gói cẩn thận. Chất lượng tuyệt vời.',
-    'Giá cả hợp lý, phần ăn vừa đủ. Rất hài lòng với trải nghiệm.',
-    'Lần đầu thử và rất ấn tượng. Gia vị đậm đà, rất vừa miệng.',
-    'Đồ ăn tươi ngon, nhân viên phục vụ nhiệt tình. 5 sao!',
-    'Mình hay đặt món này cho cả gia đình. Ai cũng thích.',
-  ];
-  const reviews: { id: number; name: string; rating: number; text: string; date: string; avatar: string }[] = [];
-  const count = 3 + (id % 3);
-  for (let i = 0; i < count; i++) {
-    const nameIdx = (id + i * 3) % reviewNames.length;
-    const textIdx = (id + i * 5) % reviewTexts.length;
-    reviews.push({
-      id: i,
-      name: reviewNames[nameIdx],
-      rating: Math.min(5, 3 + ((id + i) % 3)),
-      text: reviewTexts[textIdx],
-      date: `${10 + (i * 3)}/${2 + (i % 2)}/2026`,
-      avatar: reviewNames[nameIdx].charAt(0),
-    });
-  }
-  return reviews;
-}
-
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [reviewsData, setReviewsData] = useState<ReviewResponse | null>(null);
+  const [reviewableItems, setReviewableItems] = useState<Set<number>>(new Set());
+  const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
@@ -83,9 +49,14 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<'description' | 'reviews'>('description');
 
   const { addToCart } = useCartStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { openAuthModal, openCart } = useUIStore();
   const { toast } = useToast();
+
+  const fetchReviews = () => {
+    if (!id) return;
+    reviewsApi.getByProduct(id).then(res => setReviewsData(res.data)).catch(() => {});
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -99,7 +70,25 @@ export default function ProductDetailPage() {
         variant: 'destructive',
       });
     }).finally(() => setIsLoading(false));
+
+    fetchReviews();
   }, [id]);
+
+  useEffect(() => {
+    if (isAuthenticated && id) {
+      profileApi.getProfile().then(res => setUserProfile(res.data)).catch(() => {});
+      
+      reviewsApi.getReviewableOrders().then(res => {
+        const items = new Set<number>();
+        res.data?.forEach(order => {
+          order.items?.forEach(item => {
+            if (item.productId === id) items.add(item.orderItemId);
+          });
+        });
+        setReviewableItems(items);
+      }).catch(() => {});
+    }
+  }, [isAuthenticated, id]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -177,9 +166,12 @@ export default function ProductDetailPage() {
     );
   }
 
-  const { rating, count } = getProductRating(product.id);
-  const reviews = getProductReviews(product.id);
-  const ratingNum = parseFloat(rating);
+  const rating = reviewsData?.stats?.avgRating?.toFixed(1) || '0.0';
+  const count = reviewsData?.stats?.totalReviews || 0;
+  const ratingNum = reviewsData?.stats?.avgRating || 0;
+  const userReview = reviewsData?.reviews.items.find(r => r.userId === userProfile?.id);
+  const reviewableItemIds = Array.from(reviewableItems);
+  const hasReviewable = reviewableItemIds.length > 0;
   const inStock = product.stockQuantity > 0;
 
   return (
@@ -408,6 +400,34 @@ export default function ProductDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Reviews CTA */}
+                  {isAuthenticated && userReview ? (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                      <div className="flex-1">
+                        <p className="font-semibold text-amber-800">Đánh giá của bạn:</p>
+                        <div className="flex gap-0.5 mt-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className={`w-4 h-4 ${i < userReview.rating ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30'}`} />
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{userReview.content}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border">
+                      <div>
+                        <p className="font-medium">Bạn đã thưởng thức món này?</p>
+                        <p className="text-sm text-muted-foreground">Hãy chia sẻ cảm nhận với mọi người nhé.</p>
+                      </div>
+                      <Button onClick={() => {
+                        if (!isAuthenticated) openAuthModal('login');
+                        else setIsReviewModalOpen(true);
+                       }}>
+                        Viết đánh giá của bạn
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Rating Summary */}
                   <div className="flex items-center gap-6 p-6 rounded-xl bg-amber-50/50 border border-amber-100">
                     <div className="text-center">
@@ -422,7 +442,9 @@ export default function ProductDetailPage() {
                     <Separator orientation="vertical" className="h-16" />
                     <div className="flex-1 space-y-1.5">
                       {[5, 4, 3, 2, 1].map((stars) => {
-                        const pct = stars === 5 ? 60 : stars === 4 ? 25 : stars === 3 ? 10 : stars === 2 ? 3 : 2;
+                        const dist = reviewsData?.stats?.ratingDistribution as Record<string, number> || {};
+                        const starCount = dist[String(stars)] || 0;
+                        const pct = count > 0 ? (starCount / count) * 100 : 0;
                         return (
                           <div key={stars} className="flex items-center gap-2 text-sm">
                             <span className="w-3 text-right">{stars}</span>
@@ -430,7 +452,7 @@ export default function ProductDetailPage() {
                             <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                               <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="w-8 text-xs text-muted-foreground">{pct}%</span>
+                            <span className="w-8 text-xs text-muted-foreground">{Math.round(pct)}%</span>
                           </div>
                         );
                       })}
@@ -439,32 +461,40 @@ export default function ProductDetailPage() {
 
                   {/* Individual Reviews */}
                   <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="p-4 border rounded-xl">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center font-semibold text-amber-700 flex-shrink-0">
-                            {review.avatar}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm">{review.name}</span>
-                              <span className="text-xs text-muted-foreground">{review.date}</span>
+                    {!reviewsData?.reviews.items || reviewsData.reviews.items.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-8">Chưa có đánh giá nào cho sản phẩm này.</p>
+                    ) : (
+                      reviewsData.reviews.items.map((review) => (
+                        <div key={review.id} className="p-4 border rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center font-semibold text-amber-700 flex-shrink-0 uppercase">
+                              {review.userName.charAt(0)}
                             </div>
-                            <div className="flex gap-0.5 mt-0.5">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30'}`} />
-                              ))}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-sm">{review.userName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                                </span>
+                              </div>
+                              <div className="flex gap-0.5 mt-0.5">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30'}`} />
+                                ))}
+                              </div>
+                              <p className="text-sm text-foreground mt-2 leading-relaxed">{review.content}</p>
+                              {review.sellerReply && (
+                                <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
+                                  <p className="font-semibold text-amber-700 mb-1">Phản hồi từ quán:</p>
+                                  <p className="text-muted-foreground">{review.sellerReply}</p>
+                                </div>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{review.text}</p>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
-
-                  <p className="text-center text-sm text-muted-foreground py-4">
-                    Chức năng đánh giá đang được phát triển. Các đánh giá hiện tại là dữ liệu mẫu.
-                  </p>
                 </div>
               )}
             </div>
@@ -478,6 +508,23 @@ export default function ProductDetailPage() {
       <CartDrawer />
       <AuthModal />
       <ChatBot />
+
+      <CreateReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        orderItemId={hasReviewable ? reviewableItemIds[0] : 0}
+        productName={product.name}
+        onSuccess={() => {
+          fetchReviews();
+          if (hasReviewable) {
+            setReviewableItems(prev => {
+              const next = new Set(prev);
+              next.delete(reviewableItemIds[0]);
+              return next;
+            });
+          }
+        }}
+      />
     </div>
   );
 }

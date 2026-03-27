@@ -211,3 +211,63 @@ export interface CouponRequest {
   expirationDate: string;
   isActive: boolean;
 }
+
+// Review & Rating Types
+export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface ReviewStats {
+  productId: number;
+  avgRating: number;
+  totalReviews: number;
+  ratingDistribution: {
+    '1': number;
+    '2': number;
+    '3': number;
+    '4': number;
+    '5': number;
+  };
+}
+
+export interface Review {
+  id: number;
+  productId: number;
+  productName: string;
+  orderItemId: number;
+  userId: number;
+  userName: string;
+  rating: number;
+  content: string;
+  status: ReviewStatus;
+  reportCount: number;
+  sellerReply: string | null;
+  rejectionReason: string | null;
+  sellerReplyAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewResponse {
+  stats: ReviewStats;
+  reviews: PaginatedResponse<Review>;
+}
+
+export interface ReviewRequest {
+  orderItemId: number;
+  rating: number;
+  content: string;
+}
+
+export interface ReviewableOrderItem {
+  orderItemId: number;
+  productId: number;
+  productName: string;
+  imageUrl: string | null;
+  quantity: number;
+}
+
+export interface ReviewableOrder {
+  orderId: number;
+  status: OrderStatus;
+  createdAt: string;
+  items: ReviewableOrderItem[];
+}
