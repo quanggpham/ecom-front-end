@@ -293,7 +293,13 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
           /* Order List */
           <div className="space-y-4">
             {orders.map((order) => {
-              const status = statusConfig[order.status] || statusConfig.PENDING;
+              const baseStatus = statusConfig[order.status] || statusConfig.PENDING;
+              const status = { ...baseStatus };
+              if (order.status === 'PENDING') {
+                status.label = order.paymentMethod === 'STRIPE' ? 'Chờ thanh toán' : 'Chờ xác nhận';
+              } else if (order.status === 'CONFIRMED') {
+                status.label = order.paymentMethod === 'STRIPE' ? 'Đã thanh toán' : 'Đã xác nhận';
+              }
               const StatusIcon = status.icon;
               const isExpanded = expandedOrder === order.id;
 

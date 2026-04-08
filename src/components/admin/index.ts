@@ -7,4 +7,5 @@ export { AdminCoupons } from './AdminCoupons';
 export { AdminUsers } from './AdminUsers';
 export { AdminReviews } from './AdminReviews';
 export { AdminBanners } from './AdminBanners';
+export { AdminPromotionBanners } from './AdminPromotionBanners';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, Heart, Star, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import type { Product } from '@/types';
 import { useCartStore, useAuthStore, useUIStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
-import { productsApi } from '@/lib/api';
+import { productsApi, reviewsApi } from '@/lib/api';
 
 interface ProductCardProps {
   product: Product;
@@ -23,13 +23,7 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-// Generate consistent rating based on product id
-function getProductRating(id: number): { rating: string; count: number } {
-  // Use product id to generate consistent rating
-  const ratingValue = (3.5 + (id % 15) / 10).toFixed(1);
-  const reviewCount = 50 + (id * 7) % 200;
-  return { rating: ratingValue, count: reviewCount };
-}
+
 
 export function ProductCard({ product }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -42,7 +36,30 @@ export function ProductCard({ product }: ProductCardProps) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const { rating, count } = getProductRating(product.id);
+  const [ratingStats, setRatingStats] = useState({
+    rating: (product.avgRating || 0).toFixed(1),
+    count: product.totalReviews || 0
+  });
+
+  useEffect(() => {
+    // Fetch stats async if they weren't provided in the Product list response
+    if (product.avgRating === undefined) {
+      const fetchStats = async () => {
+        try {
+          const res = await reviewsApi.getByProduct(product.id, { size: 1 });
+          if (res.data?.stats) {
+            setRatingStats({
+              rating: res.data.stats.avgRating.toFixed(1),
+              count: res.data.stats.totalReviews
+            });
+          }
+        } catch {
+          // Silent catch to prevent UI breakage
+        }
+      };
+      fetchStats();
+    }
+  }, [product.id, product.avgRating]);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -191,13 +208,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* Content */}
       <CardContent className="p-4 sm:p-5 relative bg-white z-20">
-        {/* Rating and Reviews */}
         <div className="flex items-center gap-1.5 mb-2">
           <div className="flex bg-amber-50 px-1.5 py-0.5 rounded-md items-center gap-1">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-            <span className="text-xs font-bold text-amber-700">{rating}</span>
+            <span className="text-xs font-bold text-amber-700">{ratingStats.rating}</span>
           </div>
-          <span className="text-[11px] font-medium text-gray-400">({count} đánh giá)</span>
+          <span className="text-[11px] font-medium text-gray-400">({ratingStats.count} đánh giá)</span>
         </div>
         
         {/* Product Name */}

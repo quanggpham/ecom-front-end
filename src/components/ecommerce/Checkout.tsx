@@ -22,7 +22,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useCartStore } from '@/store';
-import { ordersApi, addressApi } from '@/lib/api';
+import { ordersApi, addressApi, couponsApi, paymentsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import type { PaymentMethod, Address, AddressRequest, CheckoutRequest } from '@/types';
 import {
@@ -52,7 +52,12 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
-  
+
+  // Coupon State
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
   // Addresses State
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
@@ -110,6 +115,38 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
   const handlePaymentMethodChange = (value: string) => {
     setFormData((prev) => ({ ...prev, paymentMethod: value as PaymentMethod }));
+  };
+
+  // --- Coupon Methods ---
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setIsApplyingCoupon(true);
+    try {
+      const items = (cart?.items ?? []).map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      }));
+      const res = await couponsApi.calculateDiscount(code, items);
+      const discount = res.data?.discountAmount ?? 0;
+      if (discount <= 0) {
+        toast({ title: 'Mã không áp dụng được', description: 'Mã không hợp lệ hoặc đơn hàng chưa đủ điều kiện.', variant: 'destructive' });
+      } else {
+        setAppliedCoupon({ code, discount });
+        setCouponInput('');
+        toast({ title: 'Áp dụng thành công!', description: `Bạn được giảm ${formatPrice(discount)} với mã ${code}.` });
+      }
+    } catch {
+      toast({ title: 'Mã không hợp lệ', description: 'Mã giảm giá không tồn tại hoặc đã hết hạn.', variant: 'destructive' });
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
   };
 
   // --- Address Modal Methods ---
@@ -171,7 +208,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
         shippingAddress: selectedAddress.fullAddress,
         paymentMethod: formData.paymentMethod,
         note: formData.note,
-        code: formData.couponCode || undefined,
+        code: appliedCoupon?.code || undefined,
         items: cart.items.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -179,12 +216,35 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
       };
       
       const response = await ordersApi.checkout(requestData);
-      
-      setIsSuccess(true);
-      if (response.data?.id) {
-        setOrderId(response.data.id);
+      const newOrderId = response.data?.id;
+
+      if (newOrderId) {
+        setOrderId(newOrderId);
+        clearCart();
+
+        if (formData.paymentMethod === 'STRIPE') {
+          // Store order ID to poll for status in success page or retry in cancel page
+          localStorage.setItem('pending_stripe_order_id', newOrderId.toString());
+          try {
+            const stripeRes = await paymentsApi.createStripeCheckout(newOrderId);
+            if (stripeRes.data?.checkoutUrl) {
+              window.location.href = stripeRes.data.checkoutUrl;
+              return; // Do not set isSuccess UI, wait for redirect
+            } else {
+              throw new Error('Không có URL thanh toán');
+            }
+          } catch {
+            toast({
+              title: 'Lỗi thanh toán',
+              description: 'Không thể kết nối với cổng thanh toán Stripe. Đơn hàng đã được lưu.',
+              variant: 'destructive',
+            });
+            setIsSuccess(true);
+          }
+        } else {
+          setIsSuccess(true);
+        }
       }
-      clearCart();
     } catch (error) {
       toast({
         title: 'Lỗi',
@@ -244,7 +304,8 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
   const subtotal = cart?.totalAmt || 0;
   const shippingFee = 15000;
-  const total = subtotal + shippingFee;
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = subtotal + shippingFee - discount;
 
   return (
     <div className="container mx-auto px-4 py-8 mt-16 max-w-6xl">
@@ -306,6 +367,57 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
               />
             </div>
 
+            {/* Coupon Code Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-amber-500" /> Mã giảm giá
+              </h2>
+
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Tag className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-green-700 font-mono">{appliedCoupon.code}</p>
+                      <p className="text-sm text-green-600">Giảm {formatPrice(appliedCoupon.discount)}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveCoupon}
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  >
+                    Xoá
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nhập mã giảm giá..."
+                    className="font-mono uppercase border-gray-200 focus:border-amber-500 focus:ring-amber-500"
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
+                    disabled={isApplyingCoupon}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={isApplyingCoupon || !couponInput.trim()}
+                    className="bg-amber-500 hover:bg-amber-600 text-white shrink-0"
+                  >
+                    {isApplyingCoupon ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : 'Áp dụng'}
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-amber-500" /> Phương thức thanh toán
@@ -333,14 +445,18 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
                 </Label>
 
                 <Label
-                  htmlFor="vnpay"
-                  className={`flex items-center justify-between px-4 py-4 border rounded-xl cursor-not-allowed opacity-60 bg-gray-50`}
+                  htmlFor="stripe"
+                  className={`flex items-center justify-between px-4 py-4 border rounded-xl cursor-pointer transition-all ${
+                    formData.paymentMethod === 'STRIPE' 
+                      ? 'border-amber-500 bg-amber-50/50 shadow-sm' 
+                      : 'border-gray-200 hover:border-amber-300'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <RadioGroupItem value="VNPAY" id="vnpay" disabled />
+                    <RadioGroupItem value="STRIPE" id="stripe" className="text-amber-500" />
                     <div>
-                      <p className="font-medium text-gray-900">VNPAY</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Đang bảo trì</p>
+                      <p className="font-medium text-gray-900">Thẻ thanh toán (Stripe)</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Hỗ trợ Visa, Mastercard, thẻ ghi nợ</p>
                     </div>
                   </div>
                 </Label>
@@ -386,6 +502,15 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
                 <span>Phí vận chuyển</span>
                 <span className="font-medium text-gray-900">{formatPrice(shippingFee)}</span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-green-600">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3.5 h-3.5" />
+                    Giảm giá ({appliedCoupon.code})
+                  </span>
+                  <span className="font-semibold">-{formatPrice(discount)}</span>
+                </div>
+              )}
             </div>
 
             <Separator className="mb-4" />

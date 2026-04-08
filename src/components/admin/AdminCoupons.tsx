@@ -16,6 +16,9 @@ import {
   Hash,
   Copy,
   Check,
+  FolderTree,
+  Package,
+  ShoppingCart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,9 +49,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { couponsApi } from '@/lib/api';
+import { couponsApi, categoriesApi, productsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, CouponRequest, DiscountType } from '@/types';
+import type { Coupon, CouponRequest, DiscountType, PromotionType, Category, Product } from '@/types';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -69,7 +72,10 @@ const initialForm: CouponRequest = {
   usageLimit: 100,
   startDate: new Date().toISOString().split('T')[0],
   expirationDate: '',
-  isActive: true,
+  active: true,
+  promotionType: 'ORDER',
+  categoryId: null,
+  productId: null,
 };
 
 export function AdminCoupons() {
@@ -86,7 +92,17 @@ export function AdminCoupons() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  // Categories & Products state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Tải danh mục và sản phẩm cho form
+    categoriesApi.getAll().then(res => setCategories(res.data || []));
+    productsApi.getAll({ size: 1000 }).then(res => setProducts((res.data as any)?.items || []));
+  }, []);
 
   const fetchCoupons = async () => {
     setIsLoading(true);
@@ -123,7 +139,10 @@ export function AdminCoupons() {
       usageLimit: coupon.usageLimit,
       startDate: coupon.startDate,
       expirationDate: coupon.expirationDate,
-      isActive: coupon.active,
+      active: coupon.active,
+      promotionType: coupon.promotionType || 'ORDER',
+      categoryId: coupon.categoryId,
+      productId: coupon.productId,
     });
     setIsDialogOpen(true);
   };
@@ -137,8 +156,21 @@ export function AdminCoupons() {
 
     setIsSubmitting(true);
     try {
+      // Validate theo rule backend chặn
+      const submitData = { ...formData };
+      if (submitData.promotionType === 'ORDER') {
+        submitData.categoryId = null;
+        submitData.productId = null;
+      } else if (submitData.promotionType === 'CATEGORY') {
+        submitData.productId = null;
+        if (!submitData.categoryId) throw new Error('Vui lòng chọn danh mục áp dụng');
+      } else if (submitData.promotionType === 'PRODUCT') {
+        submitData.categoryId = null;
+        if (!submitData.productId) throw new Error('Vui lòng chọn sản phẩm áp dụng');
+      }
+
       if (editingCoupon) {
-        await couponsApi.update(editingCoupon.id, formData);
+        await couponsApi.update(editingCoupon.id, submitData);
         toast({ title: 'Thành công', description: 'Cập nhật mã giảm giá thành công' });
       } else {
         await couponsApi.create(formData);
@@ -146,8 +178,8 @@ export function AdminCoupons() {
       }
       setIsDialogOpen(false);
       fetchCoupons();
-    } catch {
-      toast({ title: 'Lỗi', description: 'Không thể lưu mã giảm giá', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Lỗi', description: err.message || 'Không thể lưu mã giảm giá', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -233,6 +265,7 @@ export function AdminCoupons() {
                   <TableRow>
                     <TableHead>Mã</TableHead>
                     <TableHead>Loại</TableHead>
+                    <TableHead>Phạm vi</TableHead>
                     <TableHead>Giá trị</TableHead>
                     <TableHead>Đơn tối thiểu</TableHead>
                     <TableHead>Sử dụng</TableHead>
@@ -272,6 +305,24 @@ export function AdminCoupons() {
                               <><DollarSign className="w-3 h-3" /> Cố định</>
                             )}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {coupon.promotionType === 'CATEGORY' ? (
+                            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-transparent shadow-none font-medium gap-1">
+                              <FolderTree className="w-3.5 h-3.5" />
+                              Danh mục 
+                            </Badge>
+                          ) : coupon.promotionType === 'PRODUCT' ? (
+                            <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-transparent shadow-none font-medium gap-1">
+                              <Package className="w-3.5 h-3.5" />
+                              Sản phẩm
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-transparent shadow-none font-medium gap-1">
+                              <ShoppingCart className="w-3.5 h-3.5" />
+                              Toàn đơn
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="font-medium">
                           {coupon.discountType === 'PERCENTAGE'
@@ -394,22 +445,81 @@ export function AdminCoupons() {
               />
             </div>
 
-            {/* Discount Type */}
-            <div className="space-y-2">
-              <Label>Loại giảm giá *</Label>
-              <Select
-                value={formData.discountType}
-                onValueChange={(v) => setFormData({ ...formData, discountType: v as DiscountType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FIXED_AMOUNT">Giảm số tiền cố định (VNĐ)</SelectItem>
-                  <SelectItem value="PERCENTAGE">Giảm theo phần trăm (%)</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Discount Type & Promotion Scope */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Loại giảm giá *</Label>
+                <Select
+                  value={formData.discountType}
+                  onValueChange={(v) => setFormData({ ...formData, discountType: v as DiscountType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIXED_AMOUNT">Số tiền (VNĐ)</SelectItem>
+                    <SelectItem value="PERCENTAGE">Phần trăm (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Phạm vi áp dụng *</Label>
+                <Select
+                  value={formData.promotionType}
+                  onValueChange={(v) => setFormData({ ...formData, promotionType: v as PromotionType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ORDER">Toàn bộ đơn hàng</SelectItem>
+                    <SelectItem value="CATEGORY">Danh mục sản phẩm</SelectItem>
+                    <SelectItem value="PRODUCT">Sản phẩm cụ thể</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {/* Target ID Selection (Conditional) */}
+            {formData.promotionType === 'CATEGORY' && (
+              <div className="space-y-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                <Label className="text-blue-700 shrink-0">Chọn danh mục áp dụng *</Label>
+                <Select
+                  value={formData.categoryId?.toString() || ''}
+                  onValueChange={(v) => setFormData({ ...formData, categoryId: Number(v) })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="-- Chọn danh mục --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => (
+                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.promotionType === 'PRODUCT' && (
+              <div className="space-y-2 p-3 bg-orange-50/50 rounded-xl border border-orange-100">
+                <Label className="text-orange-700 shrink-0">Chọn sản phẩm áp dụng *</Label>
+                <Select
+                  value={formData.productId?.toString() || ''}
+                  onValueChange={(v) => setFormData({ ...formData, productId: Number(v) })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="-- Chọn sản phẩm --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
 
             {/* Discount Value */}
             <div className="grid grid-cols-2 gap-3">
@@ -434,7 +544,8 @@ export function AdminCoupons() {
                   value={formData.maxDiscountAmount || ''}
                   onChange={(e) => setFormData({ ...formData, maxDiscountAmount: Number(e.target.value) })}
                   min={0}
-                  required
+                  required={formData.discountType === 'PERCENTAGE'}
+                  disabled={formData.discountType === 'FIXED_AMOUNT'}
                 />
               </div>
             </div>

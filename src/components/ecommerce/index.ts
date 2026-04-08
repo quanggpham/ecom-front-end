@@ -12,3 +12,5 @@ export { OrderHistory } from './OrderHistory';
 export { ChatBot } from './ChatBot';
 export { Footer } from './Footer';
 export { CreateReviewModal } from './CreateReviewModal';
+export { PromotionsSection } from './PromotionsSection';
+

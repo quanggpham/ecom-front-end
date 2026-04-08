@@ -27,6 +27,8 @@ import type {
   ReviewStatus,
   Banner,
   BannerRequest,
+  PromotionBanner,
+  PromotionBannerRequest,
 } from '@/types';
 
 // API Base URL - update this if needed
@@ -85,7 +87,8 @@ async function fetchApi<T>(
     headers,
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
   
   if (!response.ok) {
     throw new Error(data.message || 'An error occurred');
@@ -475,8 +478,34 @@ export const couponsApi = {
     });
   },
 
-  calculateDiscount: async (code: string, amount: number): Promise<ApiResponse<number>> => {
-    return fetchApi<number>(`/api/v1/coupons/calculate?code=${encodeURIComponent(code)}&amount=${amount}`);
+  // POST /api/v1/coupons/calculate
+  // Contract: { code, items: [{productId, quantity}] } → { discountAmount, appliedToItems, promotionType }
+  calculateDiscount: async (
+    code: string,
+    items: { productId: number; quantity: number }[]
+  ): Promise<ApiResponse<{ discountAmount: number; appliedToItems: number[]; promotionType: string }>> => {
+    return fetchApi<{ discountAmount: number; appliedToItems: number[]; promotionType: string }>(
+      '/api/v1/coupons/calculate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ code, items }),
+      }
+    );
+  },
+};
+
+export type StripeCheckoutData = {
+  sessionId: string;
+  checkoutUrl: string;
+  publishableKey: string;
+};
+
+// Payments API
+export const paymentsApi = {
+  createStripeCheckout: async (orderId: number): Promise<ApiResponse<StripeCheckoutData>> => {
+    return fetchApi<StripeCheckoutData>(`/api/v1/payments/${orderId}/stripe/checkout`, {
+      method: 'POST',
+    });
   },
 };
 
@@ -696,3 +725,56 @@ export const bannersApi = {
     });
   },
 };
+
+// Promotion Banners API (section #promotions trên homepage)
+export const promotionBannersApi = {
+  // Public — chỉ trả banner active, đúng thời gian
+  getActive: async (): Promise<ApiResponse<PromotionBanner[]>> => {
+    return fetchApi<PromotionBanner[]>('/api/v1/promotion-banners');
+  },
+
+  // Admin — tất cả banner, có phân trang
+  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<PromotionBanner>>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page !== undefined) searchParams.append('page', String(params.page));
+    if (params?.size !== undefined) searchParams.append('size', String(params.size));
+    const q = searchParams.toString();
+    return fetchApi<PaginatedResponse<PromotionBanner>>(q ? `/api/v1/admin/promotion-banners?${q}` : '/api/v1/admin/promotion-banners');
+  },
+
+  getById: async (id: number): Promise<ApiResponse<PromotionBanner>> => {
+    return fetchApi<PromotionBanner>(`/api/v1/admin/promotion-banners/${id}`);
+  },
+
+  create: async (data: PromotionBannerRequest): Promise<ApiResponse<PromotionBanner>> => {
+    return fetchApi<PromotionBanner>('/api/v1/admin/promotion-banners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: Partial<PromotionBannerRequest>): Promise<ApiResponse<PromotionBanner>> => {
+    return fetchApi<PromotionBanner>(`/api/v1/admin/promotion-banners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<ApiResponse<void>> => {
+    return fetchApi<void>(`/api/v1/admin/promotion-banners/${id}`, { method: 'DELETE' });
+  },
+
+  changeStatus: async (id: number, active: boolean): Promise<ApiResponse<void>> => {
+    return fetchApi<void>(`/api/v1/admin/promotion-banners/${id}/status?active=${active}`, {
+      method: 'PATCH',
+    });
+  },
+
+  reorder: async (items: { id: number; displayOrder: number }[]): Promise<ApiResponse<void>> => {
+    return fetchApi<void>('/api/v1/admin/promotion-banners/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify(items),
+    });
+  },
+};
+

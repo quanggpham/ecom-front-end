@@ -13,6 +13,7 @@ import {
   ChatBot,
   UserProfile,
   Footer,
+  PromotionsSection,
 } from '@/components/ecommerce';
 import {
   AdminSidebar,
@@ -24,6 +25,7 @@ import {
   AdminUsers,
   AdminReviews,
   AdminBanners,
+  AdminPromotionBanners,
 } from '@/components/admin';
 import { useAuthStore, useCartStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -121,6 +123,7 @@ function HomeContent() {
             {adminTab === 'users' && <AdminUsers />}
             {adminTab === 'reviews' && <AdminReviews />}
             {adminTab === 'banners' && <AdminBanners />}
+            {adminTab === 'promo-banners' && <AdminPromotionBanners />}
             {adminTab === 'settings' && (
               <div className="space-y-6">
                 <h1 className="text-2xl font-bold">Cài đặt</h1>
@@ -178,36 +181,8 @@ function HomeContent() {
         {/* Product List */}
         <ProductList />
 
-        {/* Promotions Section */}
-        <section id="promotions" className="py-12 bg-gradient-to-r from-amber-500 to-orange-500">
-          <div className="container mx-auto px-4">
-            <div className="text-center text-white mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold mb-2 flex items-center justify-center gap-2">
-                <Star className="w-6 h-6 text-yellow-300" />
-                Khuyến mãi đặc biệt
-              </h2>
-              <p className="text-white/90">
-                Giảm ngay 20% cho đơn hàng đầu tiên - Sử dụng mã: VIETFOOD20
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { title: 'Combo Gia Đình', discount: 'Giảm 30%', code: 'FAMILY30' },
-                { title: 'Freeship Đơn từ 200K', discount: 'Miễn phí ship', code: 'FREESHIP' },
-                { title: 'Món mới thử', discount: 'Giảm 15%', code: 'NEWFOOD' },
-              ].map((promo, index) => (
-                <div
-                  key={index}
-                  className="p-6 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 text-white hover:-translate-y-1 hover:bg-white/25 hover:shadow-xl transition-all duration-300 cursor-pointer"
-                >
-                  <h3 className="text-lg font-bold mb-1">{promo.title}</h3>
-                  <p className="text-2xl font-bold mb-2">{promo.discount}</p>
-                  <p className="text-sm opacity-90">Mã: {promo.code}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Promotions Section — dynamic from API */}
+        <PromotionsSection />
 
         {/* Popular Items Section */}
         <section className="py-12 bg-muted/30">

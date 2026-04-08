@@ -17,6 +17,7 @@ import {
   Star,
   Megaphone,
 } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -64,6 +65,11 @@ const menuItems = [
     icon: Megaphone,
     key: 'banners',
   },
+  {
+    title: 'Promo Banners',
+    icon: Tag,
+    key: 'promo-banners',
+  },
 ];
 
 interface SidebarContentProps {
@@ -71,12 +77,14 @@ interface SidebarContentProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onLogout: () => void;
+  showHeader?: boolean;
 }
 
-function SidebarContent({ collapsed, activeTab, onTabChange, onLogout }: SidebarContentProps) {
+function SidebarContent({ collapsed, activeTab, onTabChange, onLogout, showHeader = false }: SidebarContentProps) {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
+      {showHeader && (
       <div className={cn(
         "flex items-center border-b px-4 h-16",
         collapsed ? "justify-center" : "justify-between"
@@ -90,6 +98,7 @@ function SidebarContent({ collapsed, activeTab, onTabChange, onLogout }: Sidebar
           </div>
         )}
       </div>
+      )}
 
       {/* Navigation */}
       <ScrollArea className="flex-1 py-4">
@@ -170,7 +179,7 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     <>
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden lg:flex flex-col border-r bg-card transition-all duration-300",
+        "hidden lg:flex flex-col border-r bg-card transition-all duration-300 sticky top-0 h-screen overflow-hidden",
         collapsed ? "w-16" : "w-64"
       )}>
         <div className="flex items-center border-b px-4 h-16 justify-between">
@@ -208,9 +217,10 @@ export function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
-          <div className="h-full pt-6">
+          <div className="h-full pt-1 flex flex-col">
             <SidebarContent
               collapsed={false}
+              showHeader={true}
               activeTab={activeTab}
               onTabChange={(tab) => {
                 onTabChange(tab);

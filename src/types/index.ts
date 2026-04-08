@@ -34,6 +34,8 @@ export interface Product {
   createdAt: string;
   likeCount?: number;
   liked?: boolean;
+  avgRating?: number;
+  totalReviews?: number;
 }
 
 // Cart Types
@@ -78,7 +80,7 @@ export interface Order {
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED';
 
-export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO';
+export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO' | 'STRIPE';
 
 // Auth Types
 export interface LoginRequest {
@@ -184,6 +186,7 @@ export interface ProductSearchParams {
 
 // Coupon Types
 export type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';
+export type PromotionType = 'ORDER' | 'CATEGORY' | 'PRODUCT';
 
 export interface Coupon {
   id: number;
@@ -191,6 +194,9 @@ export interface Coupon {
   discountType: DiscountType;
   discountValue: number;
   maxDiscountAmount: number;
+  promotionType: PromotionType;
+  categoryId: number | null;
+  productId: number | null;
   minOrderValue: number;
   usageLimit: number;
   usedCount: number;
@@ -205,11 +211,14 @@ export interface CouponRequest {
   discountType: DiscountType;
   discountValue: number;
   maxDiscountAmount: number;
+  promotionType: PromotionType;
+  categoryId: number | null;
+  productId: number | null;
   minOrderValue: number;
   usageLimit: number;
   startDate: string;
   expirationDate: string;
-  isActive: boolean;
+  active: boolean;
 }
 
 // Review & Rating Types
@@ -302,6 +311,35 @@ export interface BannerRequest {
   badgeText?: string;
   badgeIcon?: BadgeIcon;
   overlayColor?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+  startDate?: string;
+  endDate?: string;
+}
+
+// Promotion Banner Types (section #promotions trên homepage)
+export interface PromotionBanner {
+  id: number;
+  title: string;
+  discountLabel: string;
+  couponCode: string | null;
+  description: string | null;
+  linkUrl: string | null;
+  bgColor: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt?: string;
+}
+
+export interface PromotionBannerRequest {
+  title: string;
+  discountLabel: string;
+  couponCode?: string;
+  description?: string;
+  linkUrl?: string;
+  bgColor?: string;
   displayOrder?: number;
   isActive?: boolean;
   startDate?: string;
