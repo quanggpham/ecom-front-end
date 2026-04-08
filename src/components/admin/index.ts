@@ -6,3 +6,5 @@ export { AdminOrders } from './AdminOrders';
 export { AdminCoupons } from './AdminCoupons';
 export { AdminUsers } from './AdminUsers';
 export { AdminReviews } from './AdminReviews';
+export { AdminBanners } from './AdminBanners';
+

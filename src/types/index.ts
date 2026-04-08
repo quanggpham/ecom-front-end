@@ -271,3 +271,39 @@ export interface ReviewableOrder {
   createdAt: string;
   items: ReviewableOrderItem[];
 }
+
+// Banner Types
+export type BadgeIcon = 'FLAME' | 'STAR' | 'TAG' | 'GIFT' | 'NONE';
+
+export interface Banner {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  imageUrl: string;
+  linkUrl: string | null;
+  badgeText: string | null;
+  badgeIcon: BadgeIcon;
+  overlayColor: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BannerRequest {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  imageUrl: string;
+  linkUrl?: string;
+  badgeText?: string;
+  badgeIcon?: BadgeIcon;
+  overlayColor?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+  startDate?: string;
+  endDate?: string;
+}

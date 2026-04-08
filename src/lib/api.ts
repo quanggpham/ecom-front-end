@@ -25,6 +25,8 @@ import type {
   ReviewRequest,
   ReviewableOrder,
   ReviewStatus,
+  Banner,
+  BannerRequest,
 } from '@/types';
 
 // API Base URL - update this if needed
@@ -640,5 +642,57 @@ export const statisticsApi = {
       : '/api/v1/admin/statistics/top-products';
     
     return fetchApi<TopProduct[]>(endpoint);
+  },
+};
+
+// Banners API
+export const bannersApi = {
+  // Public — chỉ trả banner đang active, đúng thời gian hiệu lực
+  getActive: async (): Promise<ApiResponse<Banner[]>> => {
+    return fetchApi<Banner[]>('/api/v1/banners');
+  },
+
+  // Admin — lấy tất cả banner (kể cả inactive), có phân trang
+  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<Banner>>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.page !== undefined) searchParams.append('page', String(params.page));
+    if (params?.size !== undefined) searchParams.append('size', String(params.size));
+    const q = searchParams.toString();
+    return fetchApi<PaginatedResponse<Banner>>(q ? `/api/v1/admin/banners?${q}` : '/api/v1/admin/banners');
+  },
+
+  getById: async (id: number): Promise<ApiResponse<Banner>> => {
+    return fetchApi<Banner>(`/api/v1/admin/banners/${id}`);
+  },
+
+  create: async (data: BannerRequest): Promise<ApiResponse<Banner>> => {
+    return fetchApi<Banner>('/api/v1/admin/banners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: Partial<BannerRequest>): Promise<ApiResponse<Banner>> => {
+    return fetchApi<Banner>(`/api/v1/admin/banners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<ApiResponse<void>> => {
+    return fetchApi<void>(`/api/v1/admin/banners/${id}`, { method: 'DELETE' });
+  },
+
+  changeStatus: async (id: number, active: boolean): Promise<ApiResponse<void>> => {
+    return fetchApi<void>(`/api/v1/admin/banners/${id}/status?active=${active}`, {
+      method: 'PATCH',
+    });
+  },
+
+  reorder: async (items: { id: number; displayOrder: number }[]): Promise<ApiResponse<void>> => {
+    return fetchApi<void>('/api/v1/admin/banners/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify(items),
+    });
   },
 };

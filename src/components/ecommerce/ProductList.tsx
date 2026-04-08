@@ -136,10 +136,10 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-medium mb-3">
+          {/* <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-medium mb-3">
             <UtensilsCrossed className="w-4 h-4" />
             Thực đơn
-          </div>
+          </div> */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">
             Món ăn <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">nổi bật</span>
           </h2>

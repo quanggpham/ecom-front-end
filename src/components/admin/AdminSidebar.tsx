@@ -15,6 +15,7 @@ import {
   Store,
   User,
   Star,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,11 @@ const menuItems = [
     title: 'Đánh giá',
     icon: Star,
     key: 'reviews',
+  },
+  {
+    title: 'Banners',
+    icon: Megaphone,
+    key: 'banners',
   },
 ];
 

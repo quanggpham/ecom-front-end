@@ -23,6 +23,7 @@ import {
   AdminCoupons,
   AdminUsers,
   AdminReviews,
+  AdminBanners,
 } from '@/components/admin';
 import { useAuthStore, useCartStore } from '@/store';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,7 @@ function HomeContent() {
             {adminTab === 'coupons' && <AdminCoupons />}
             {adminTab === 'users' && <AdminUsers />}
             {adminTab === 'reviews' && <AdminReviews />}
+            {adminTab === 'banners' && <AdminBanners />}
             {adminTab === 'settings' && (
               <div className="space-y-6">
                 <h1 className="text-2xl font-bold">Cài đặt</h1>
