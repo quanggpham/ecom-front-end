@@ -108,6 +108,24 @@ export function UserProfile({ onBack }: UserProfileProps) {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!profileData.fullName.trim()) {
+      toast({ title: 'Lỗi', description: 'Vui lòng nhập họ tên', variant: 'destructive' });
+      return;
+    }
+
+    const nameRegex = /^[\p{L}\s]+$/u;
+    if (!nameRegex.test(profileData.fullName.trim())) {
+      toast({ title: 'Lỗi', description: 'Họ tên không được chứa số hoặc ký tự đặc biệt', variant: 'destructive' });
+      return;
+    }
+
+    const phoneRegex = /^(0[35789])[0-9]{8}$/;
+    if (!phoneRegex.test(profileData.phone)) {
+      toast({ title: 'Lỗi', description: 'Số điện thoại không hợp lệ (VD: 0912345678)', variant: 'destructive' });
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
       await profileApi.updateProfile(profileData);

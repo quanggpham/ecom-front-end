@@ -36,12 +36,41 @@ export function CartDrawer() {
   const { isCartOpen, closeCart, openAuthModal } = useUIStore();
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (isCartOpen && isAuthenticated) {
       fetchCart();
     }
   }, [isCartOpen, isAuthenticated, fetchCart]);
+
+  useEffect(() => {
+    // Auto select all items when cart loads or changes items significantly
+    if (cart?.items) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        cart.items.forEach(item => next.add(item.productId));
+        return next;
+      });
+    }
+  }, [cart?.items?.length]);
+
+  const toggleItem = (productId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === (cart?.items?.length || 0)) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(cart?.items?.map(i => i.productId)));
+    }
+  };
 
   const handleUpdateQuantity = async (productId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -92,15 +121,24 @@ export function CartDrawer() {
   };
 
   const handleCheckout = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: 'Chưa chọn sản phẩm', description: 'Vui lòng chọn ít nhất 1 món ăn để thanh toán.', variant: 'destructive' });
+      return;
+    }
     if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
+    
+    // Save selected item ids
+    localStorage.setItem('checkout_selected_ids', JSON.stringify(Array.from(selectedIds)));
     closeCart();
     window.location.href = '/?view=checkout';
   };
 
-  const itemsCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const itemsCount = cart?.items?.length || 0;
+  const selectedItems = cart?.items?.filter(i => selectedIds.has(i.productId)) || [];
+  const selectedTotal = selectedItems.reduce((sum, item) => sum + item.subTotal, 0);
 
   return (
     <Sheet open={isCartOpen} onOpenChange={closeCart}>
@@ -111,7 +149,7 @@ export function CartDrawer() {
             <ShoppingCart className="w-5 h-5 text-amber-500" />
             <SheetTitle>Giỏ hàng</SheetTitle>
             {itemsCount > 0 && (
-              <span className="ml-auto text-sm text-muted-foreground">
+              <span className="ml-auto text-sm text-muted-foreground mr-6">
                 {itemsCount} món
               </span>
             )}
@@ -163,12 +201,24 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
-            {/* Clear Cart Button */}
-            <div className="px-4 py-2 border-b flex justify-end">
+            {/* Action Bar */}
+            <div className="px-4 py-2 border-b flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                  checked={cart?.items?.length > 0 && selectedIds.size === cart?.items?.length}
+                  onChange={toggleAll}
+                  id="selectAll"
+                />
+                <label htmlFor="selectAll" className="text-sm font-medium cursor-pointer select-none">
+                  Chọn tất cả
+                </label>
+              </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 px-2"
                 onClick={handleClearCart}
               >
                 <Trash2 className="w-4 h-4 mr-1" />
@@ -182,8 +232,20 @@ export function CartDrawer() {
                 {cart.items.map((item) => (
                   <div 
                     key={item.itemId}
-                    className="flex gap-3 p-3 bg-muted/50 rounded-lg"
+                    className={`flex gap-3 p-3 rounded-xl border transition-all duration-200 [-webkit-tap-highlight-color:transparent] ${
+                      selectedIds.has(item.productId) ? 'bg-amber-50/50 border-amber-200' : 'bg-muted/30 border-transparent opacity-80'
+                    }`}
                   >
+                    {/* Checkbox */}
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 accent-amber-500 text-amber-500 focus:ring-0 focus:ring-offset-0 focus:outline-none w-5 h-5 cursor-pointer shadow-none [-webkit-tap-highlight-color:transparent]"
+                        checked={selectedIds.has(item.productId)}
+                        onChange={() => toggleItem(item.productId)}
+                      />
+                    </div>
+
                     {/* Product Image */}
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-white flex-shrink-0">
                       {item.imageUrl ? (
@@ -219,13 +281,15 @@ export function CartDrawer() {
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">
-                          {updatingId === item.productId ? (
-                            <Loader2 className="w-3 h-3 animate-spin inline" />
-                          ) : (
-                            item.quantity
-                          )}
-                        </span>
+                        {updatingId === item.productId ? (
+                          <span className="w-10 flex justify-center text-sm"><Loader2 className="w-3 h-3 animate-spin inline" /></span>
+                        ) : (
+                          <QuantityInput
+                            itemQuantity={item.quantity}
+                            productId={item.productId}
+                            handleUpdateQuantity={handleUpdateQuantity}
+                          />
+                        )}
                         <Button
                           variant="outline"
                           size="icon"
@@ -258,12 +322,12 @@ export function CartDrawer() {
             </ScrollArea>
 
             {/* Footer */}
-            <div className="border-t p-4 space-y-4">
+            <div className="border-t p-4 space-y-4 shadow-[0_-4px_10px_rgb(0,0,0,0.03)] bg-white z-10">
               {/* Total */}
               <div className="flex items-center justify-between">
-                <span className="font-medium">Tổng cộng:</span>
+                <span className="font-medium">Tổng ({selectedIds.size} món):</span>
                 <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                  {formatPrice(cart.totalAmt)}
+                  {formatPrice(selectedTotal)}
                 </span>
               </div>
 
@@ -289,5 +353,44 @@ export function CartDrawer() {
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function QuantityInput({ 
+  itemQuantity, 
+  productId, 
+  handleUpdateQuantity 
+}: { 
+  itemQuantity: number; 
+  productId: number; 
+  handleUpdateQuantity: (id: number, qt: number) => void 
+}) {
+  const [val, setVal] = useState(itemQuantity.toString());
+  
+  useEffect(() => {
+    setVal(itemQuantity.toString());
+  }, [itemQuantity]);
+
+  const commitValue = () => {
+    const num = parseInt(val);
+    if (!isNaN(num) && num >= 1) {
+      if (num !== itemQuantity) {
+        handleUpdateQuantity(productId, num);
+      }
+    } else {
+      setVal(itemQuantity.toString());
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min="1"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={commitValue}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      className="w-10 text-center text-sm font-medium border-0 focus:ring-0 focus:outline-none bg-transparent p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    />
   );
 }

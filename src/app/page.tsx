@@ -178,11 +178,11 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Product List */}
-        <ProductList />
-
         {/* Promotions Section — dynamic from API */}
         <PromotionsSection />
+
+        {/* Product List */}
+        <ProductList />
 
         {/* Popular Items Section */}
         <section className="py-12 bg-muted/30">

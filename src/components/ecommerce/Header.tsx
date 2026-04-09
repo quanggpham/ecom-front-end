@@ -39,7 +39,7 @@ export function Header() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const { openCart, openAuthModal } = useUIStore();
   
-  const cartItemsCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const cartItemsCount = cart?.items?.length || 0;
 
   useEffect(() => {
     const handleScroll = () => {

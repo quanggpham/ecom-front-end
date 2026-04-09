@@ -545,7 +545,7 @@ export function AdminBanners() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="overflow-y-auto flex-1 pr-1">
+          <div className="overflow-y-auto flex-1 px-1 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <form id="banner-form" onSubmit={handleSubmit} className="space-y-5">
               {/* Preview */}
               <div className="space-y-1.5">

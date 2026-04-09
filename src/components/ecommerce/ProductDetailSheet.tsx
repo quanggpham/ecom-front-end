@@ -24,6 +24,7 @@ import {
 import type { Product } from '@/types';
 import { useCartStore, useAuthStore, useUIStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
+import { productsApi } from '@/lib/api';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('vi-VN', {
@@ -49,11 +50,13 @@ export function ProductDetailSheet() {
   const { addToCart } = useCartStore();
   const { isAuthenticated } = useAuthStore();
   const { toast } = useToast();
+  const [isLiking, setIsLiking] = useState(false);
+  const [isLiked, setIsLiked] = useState(selectedProduct?.liked || false);
 
-  // Reset quantity when product changes
   useEffect(() => {
     setQuantity(1);
-  }, [selectedProduct?.id]);
+    setIsLiked(selectedProduct?.liked || false);
+  }, [selectedProduct?.id, selectedProduct?.liked]);
 
   if (!selectedProduct) return null;
 
@@ -99,6 +102,33 @@ export function ProductDetailSheet() {
     }
   };
 
+  const handleFavoriteClick = async () => {
+    if (!isAuthenticated) return openAuthModal('login');
+    if (isLiking || !product) return;
+    setIsLiking(true);
+    const prev = isLiked;
+    setIsLiked(!isLiked);
+    try {
+      const res = await productsApi.toggleLike(product.id);
+      if (res.data?.liked !== undefined) setIsLiked(res.data.liked);
+      toast({ title: res.data?.liked ? 'Đã thêm vào yêu thích' : 'Đã bỏ yêu thích', duration: 1500 });
+    } catch {
+      setIsLiked(prev);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}/product/${product.id}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Đã sao chép liên kết sản phẩm!', duration: 1500 });
+    } catch {
+      toast({ title: 'Đã sao chép!', duration: 1500 });
+    }
+  };
+
   return (
     <Sheet open={isProductDetailOpen} onOpenChange={(open) => !open && closeProductDetail()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -134,18 +164,19 @@ export function ProductDetailSheet() {
               <Button 
                 size="icon" 
                 variant="secondary"
-                className="bg-white/90 backdrop-blur-sm hover:bg-white"
-                onClick={() => toast({ title: 'Đã thêm vào yêu thích!', duration: 1500 })}
+                disabled={isLiking}
+                className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-md rounded-full h-9 w-9"
+                onClick={handleFavoriteClick}
               >
-                <Heart className="w-4 h-4" />
+                <Heart className={`w-[18px] h-[18px] text-amber-600 transition-colors ${isLiked ? 'fill-amber-600' : ''}`} />
               </Button>
               <Button 
                 size="icon" 
                 variant="secondary"
-                className="bg-white/90 backdrop-blur-sm hover:bg-white"
-                onClick={() => toast({ title: 'Đã sao chép liên kết!', duration: 1500 })}
+                className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-md rounded-full h-9 w-9"
+                onClick={handleShare}
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-[18px] h-[18px] text-amber-600" />
               </Button>
             </div>
           </div>

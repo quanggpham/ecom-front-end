@@ -20,7 +20,9 @@ import {
   Eye, 
   EyeOff,
   Loader2,
-  Chrome
+  Chrome,
+  Phone,
+  CheckCircle
 } from 'lucide-react';
 import { useAuthStore, useUIStore } from '@/store';
 import { useToast } from '@/hooks/use-toast';
@@ -33,14 +35,20 @@ export function AuthModal() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const resetForm = () => {
     setEmail('');
     setPassword('');
-    setName('');
+    setFullName('');
+    setPhone('');
+    setConfirmPassword('');
     setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,15 +69,35 @@ export function AuthModal() {
         toast({ title: 'Đăng nhập thành công!', description: 'Chào mừng bạn trở lại' });
         return;
       } else {
-        if (!name.trim()) {
-          toast({
-            title: 'Lỗi',
-            description: 'Vui lòng nhập họ tên',
-            variant: 'destructive',
-          });
+        if (!fullName.trim()) {
+          toast({ title: 'Lỗi', description: 'Vui lòng nhập họ tên', variant: 'destructive' });
           return;
         }
-        await register(name, email, password);
+        
+        const nameRegex = /^[\p{L}\s]+$/u;
+        if (!nameRegex.test(fullName.trim())) {
+          toast({ title: 'Lỗi', description: 'Họ tên không được chứa số hoặc ký tự đặc biệt', variant: 'destructive' });
+          return;
+        }
+
+        const phoneRegex = /^(0[35789])[0-9]{8}$/;
+        if (!phoneRegex.test(phone)) {
+          toast({ title: 'Lỗi', description: 'Số điện thoại không hợp lệ (VD: 0912345678)', variant: 'destructive' });
+          return;
+        }
+
+        const passRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+        if (!passRegex.test(password)) {
+          toast({ title: 'Lỗi', description: 'Mật khẩu phải từ 8 ký tự, gồm ít nhất một chữ cái, một số và một ký tự đặc biệt', variant: 'destructive' });
+          return;
+        }
+        
+        if (password !== confirmPassword) {
+          toast({ title: 'Lỗi', description: 'Mật khẩu xác nhận không khớp', variant: 'destructive' });
+          return;
+        }
+
+        await register(fullName, email, phone, password);
         toast({
           title: 'Đăng ký thành công!',
           description: 'Tài khoản đã được tạo',
@@ -116,23 +144,40 @@ export function AuthModal() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Name field - only for register */}
+          {/* Name & Phone fields - only for register */}
           {authMode === 'register' && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Họ tên</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Nguyễn Văn A"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Họ tên</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Nguyễn Văn A"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Số điện thoại</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="0912345678"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           {/* Email */}
@@ -165,7 +210,7 @@ export function AuthModal() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10"
                 required
-                minLength={6}
+                minLength={authMode === 'register' ? 8 : undefined}
               />
               <Button
                 type="button"
@@ -181,7 +226,58 @@ export function AuthModal() {
                 )}
               </Button>
             </div>
+            {/* Password Validation Rules UI - Only Register */}
+            {authMode === 'register' && (
+              <div className="space-y-1.5 mt-2 text-xs p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                <p className="font-medium text-gray-700 mb-2">Yêu cầu bảo mật mật khẩu:</p>
+                <div className={`flex items-center gap-2 transition-colors duration-300 ${password.length >= 8 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Tối thiểu 8 ký tự
+                </div>
+                <div className={`flex items-center gap-2 transition-colors duration-300 ${/[A-Za-z]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Ít nhất một chữ cái
+                </div>
+                <div className={`flex items-center gap-2 transition-colors duration-300 ${/\d/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Ít nhất một chữ số
+                </div>
+                <div className={`flex items-center gap-2 transition-colors duration-300 ${/[@$!%*#?&]/.test(password) ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Ký tự đặc biệt (@, $, !, %, *, #, ?, &)
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Confirm Password - only for register */}
+          {authMode === 'register' && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                  minLength={8}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Forgot password - only for login */}
           {authMode === 'login' && (

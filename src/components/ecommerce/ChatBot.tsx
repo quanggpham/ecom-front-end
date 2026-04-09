@@ -163,11 +163,12 @@ export function ChatBot() {
     setShowPulse(false);
   };
 
-  // Format markdown bold **text** to <strong>
+  // Format markdown bold **text** to <strong> and handle newlines
   const formatContent = (text: string) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br/>');
+      .replace(/\\n/g, '<br/>') // Handle literal '\n' string from JSON/Backend
+      .replace(/\n/g, '<br/>'); // Handle actual LF
   };
 
   return (
@@ -217,7 +218,7 @@ export function ChatBot() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
                       ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-br-md'
                       : 'bg-white border border-border/60 text-foreground shadow-sm rounded-bl-md'

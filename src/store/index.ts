@@ -140,7 +140,7 @@ interface AuthState {
   error: string | null;
   
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, phone: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -168,10 +168,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (name: string, email: string, password: string) => {
+      register: async (fullName: string, email: string, phone: string, password: string) => {
         set({ isLoading: true, error: null });
         try {
-          await authApi.register({ name, email, password });
+          await authApi.register({ fullName, email, phone, password });
           const token = getToken();
           const emailFromToken = token ? getEmailFromToken(token) : email;
           // New users are always USER, no need to probe

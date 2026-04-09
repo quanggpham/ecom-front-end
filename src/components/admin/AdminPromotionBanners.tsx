@@ -303,7 +303,7 @@ export function AdminPromotionBanners() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[580px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[580px] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <DialogHeader>
             <DialogTitle>{editingBanner ? 'Chỉnh sửa' : 'Tạo'} Promo Banner</DialogTitle>
           </DialogHeader>

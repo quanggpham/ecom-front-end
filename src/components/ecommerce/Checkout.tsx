@@ -46,12 +46,24 @@ interface CheckoutProps {
 }
 
 export function Checkout({ onBack, onSuccess }: CheckoutProps) {
-  const { cart, clearCart } = useCartStore();
+  const { cart, fetchCart } = useCartStore();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('checkout_selected_ids');
+      if (saved) {
+        setSelectedIds(new Set(JSON.parse(saved)));
+      }
+    } catch {}
+  }, []);
+
+  const checkoutItems = cart?.items?.filter(item => selectedIds.size > 0 ? selectedIds.has(item.productId) : true) || [];
 
   // Coupon State
   const [couponInput, setCouponInput] = useState('');
@@ -182,10 +194,10 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   // --- Submit Order ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cart || cart.items.length === 0) {
+    if (!cart || checkoutItems.length === 0) {
       toast({
         title: 'Lỗi',
-        description: 'Giỏ hàng đang trống.',
+        description: 'Không có sản phẩm nào để thanh toán.',
         variant: 'destructive',
       });
       return;
@@ -209,7 +221,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
         paymentMethod: formData.paymentMethod,
         note: formData.note,
         code: appliedCoupon?.code || undefined,
-        items: cart.items.map(item => ({
+        items: checkoutItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
@@ -220,7 +232,9 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
       if (newOrderId) {
         setOrderId(newOrderId);
-        clearCart();
+        // Do not clear the whole cart, fetch the latest cart returned from backend
+        fetchCart();
+        localStorage.removeItem('checkout_selected_ids');
 
         if (formData.paymentMethod === 'STRIPE') {
           // Store order ID to poll for status in success page or retry in cancel page
@@ -260,7 +274,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     onSuccess();
   };
 
-  if (!isSuccess && (!cart || cart.items.length === 0)) {
+  if (!isSuccess && (!cart || checkoutItems.length === 0)) {
     return (
       <div className="container mx-auto px-4 py-20 mt-16 max-w-4xl flex flex-col items-center text-center">
         <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -302,7 +316,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     );
   }
 
-  const subtotal = cart?.totalAmt || 0;
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingFee = 15000;
   const discount = appliedCoupon?.discount ?? 0;
   const total = subtotal + shippingFee - discount;
@@ -471,7 +485,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
             <h3 className="font-bold text-lg mb-4 pb-2 border-b">Chi tiết đơn hàng</h3>
             
             <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-              {cart?.items.map((item) => (
+              {checkoutItems.map((item) => (
                 <div key={item.productId} className="flex gap-4">
                   <div className="w-16 h-16 rounded-lg bg-white border overflow-hidden flex-shrink-0">
                     <img 

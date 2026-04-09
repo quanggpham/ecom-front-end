@@ -45,6 +45,7 @@ export default function ProductDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'reviews'>('description');
 
@@ -63,6 +64,7 @@ export default function ProductDetailPage() {
     setIsLoading(true);
     productsApi.getById(id).then((res) => {
       setProduct(res.data);
+      setIsFavorited(res.data?.liked || false);
     }).catch(() => {
       toast({
         title: 'Lỗi',
@@ -116,10 +118,29 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleShare = async () => {
+  const handleFavoriteClick = async () => {
+    if (!isAuthenticated) return openAuthModal('login');
+    if (isLiking || !product) return;
+    setIsLiking(true);
+    const prev = isFavorited;
+    setIsFavorited(!isFavorited);
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast({ title: 'Đã sao chép liên kết!', duration: 1500 });
+      const res = await productsApi.toggleLike(product.id);
+      if (res.data?.liked !== undefined) setIsFavorited(res.data.liked);
+      toast({ title: res.data?.liked ? 'Đã thêm vào yêu thích' : 'Đã bỏ yêu thích', duration: 1500 });
+    } catch {
+      setIsFavorited(prev);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!product) return;
+    try {
+      const url = `${window.location.origin}/product/${product.id}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Đã sao chép liên kết sản phẩm!', duration: 1500 });
     } catch {
       toast({ title: 'Đã sao chép!', duration: 1500 });
     }
@@ -224,23 +245,21 @@ export default function ProductDetailPage() {
                   <Button
                     size="icon"
                     variant="secondary"
-                    className={`bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm cursor-pointer ${
-                      isFavorited ? 'text-red-500' : ''
+                    disabled={isLiking}
+                    className={`bg-white/90 backdrop-blur-sm hover:bg-white shadow-md rounded-full h-10 w-10 cursor-pointer transition-colors ${
+                      isFavorited ? 'text-red-500 hover:text-red-600' : 'text-gray-700 hover:text-amber-600'
                     }`}
-                    onClick={() => {
-                      setIsFavorited(!isFavorited);
-                      toast({ title: isFavorited ? 'Đã bỏ yêu thích' : 'Đã thêm vào yêu thích!', duration: 1500 });
-                    }}
+                    onClick={handleFavoriteClick}
                   >
-                    <Heart className={`w-4 h-4 ${isFavorited ? 'fill-red-500' : ''}`} />
+                    <Heart className={`w-5 h-5 ${isFavorited ? 'fill-red-500' : ''}`} />
                   </Button>
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm cursor-pointer"
+                    className="bg-white/90 backdrop-blur-sm hover:bg-white shadow-md rounded-full h-10 w-10 cursor-pointer text-gray-700 hover:text-amber-600 transition-colors"
                     onClick={handleShare}
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-5 h-5" />
                   </Button>
                 </div>
 
