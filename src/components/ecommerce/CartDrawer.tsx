@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Sheet,
   SheetContent,
@@ -8,6 +9,14 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +46,8 @@ export function CartDrawer() {
   const { toast } = useToast();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (isCartOpen && isAuthenticated) {
@@ -133,7 +144,7 @@ export function CartDrawer() {
     // Save selected item ids
     localStorage.setItem('checkout_selected_ids', JSON.stringify(Array.from(selectedIds)));
     closeCart();
-    window.location.href = '/?view=checkout';
+    router.push('/?view=checkout');
   };
 
   const itemsCount = cart?.items?.length || 0;
@@ -141,6 +152,7 @@ export function CartDrawer() {
   const selectedTotal = selectedItems.reduce((sum, item) => sum + item.subTotal, 0);
 
   return (
+    <>
     <Sheet open={isCartOpen} onOpenChange={closeCart}>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
         {/* Header */}
@@ -219,7 +231,7 @@ export function CartDrawer() {
                 variant="ghost" 
                 size="sm" 
                 className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 px-2"
-                onClick={handleClearCart}
+                onClick={() => setShowClearConfirm(true)}
               >
                 <Trash2 className="w-4 h-4 mr-1" />
                 Xóa tất cả
@@ -353,6 +365,41 @@ export function CartDrawer() {
         )}
       </SheetContent>
     </Sheet>
+
+    {/* Clear Cart Confirmation Dialog */}
+    <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <Trash2 className="w-6 h-6 text-red-500" />
+          </div>
+          <DialogTitle className="text-center">Xóa toàn bộ giỏ hàng?</DialogTitle>
+          <DialogDescription className="text-center">
+            Bạn có chắc muốn xóa tất cả <span className="font-semibold text-foreground">{itemsCount} món ăn</span> khỏi giỏ hàng? Hành động này không thể hoàn tác.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-3 sm:justify-center pt-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowClearConfirm(false)}
+            className="flex-1"
+          >
+            Không, giữ lại
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setShowClearConfirm(false);
+              handleClearCart();
+            }}
+            className="flex-1"
+          >
+            Xóa tất cả
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

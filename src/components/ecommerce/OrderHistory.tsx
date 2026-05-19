@@ -17,6 +17,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ordersApi, reviewsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import type { Order, ReviewableOrder } from '@/types';
@@ -46,6 +54,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
   const [reviewableOrdersList, setReviewableOrdersList] = useState<ReviewableOrder[]>([]);
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [reviewModalData, setReviewModalData] = useState<{ id: number; name: string } | null>(null);
+  const [cancelConfirmId, setCancelConfirmId] = useState<number | null>(null);
   const pageSize = 10;
 
   const tabs = [
@@ -439,7 +448,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
                             size="sm"
                             className="w-full"
                             disabled={cancellingId === order.id}
-                            onClick={() => handleCancelOrder(order.id)}
+                            onClick={() => setCancelConfirmId(order.id)}
                           >
                             {cancellingId === order.id ? 'Đang hủy...' : 'Hủy đơn hàng'}
                           </Button>
@@ -484,6 +493,44 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
         productName={reviewModalData?.name || ''}
         onSuccess={handleReviewSuccess}
       />
+
+      {/* Cancel Order Confirmation Dialog */}
+      <Dialog open={!!cancelConfirmId} onOpenChange={(open) => !open && setCancelConfirmId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <XCircle className="w-6 h-6 text-red-500" />
+            </div>
+            <DialogTitle className="text-center">Xác nhận hủy đơn hàng</DialogTitle>
+            <DialogDescription className="text-center">
+              Bạn có chắc muốn hủy đơn hàng <span className="font-semibold text-foreground">#{cancelConfirmId}</span>?
+              Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3 sm:justify-center pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setCancelConfirmId(null)}
+              className="flex-1"
+            >
+              Không, giữ lại
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (cancelConfirmId) {
+                  handleCancelOrder(cancelConfirmId);
+                  setCancelConfirmId(null);
+                }
+              }}
+              disabled={cancellingId !== null}
+              className="flex-1"
+            >
+              Hủy đơn hàng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -14,13 +14,61 @@ interface Message {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// Typewriter component for smooth streaming effect
+const Typewriter = ({ text, isStreaming }: { text: string; isStreaming?: boolean }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    // If the streaming has ended and we haven't typed everything, snap to full text
+    if (!isStreaming) {
+      setDisplayedText(text);
+      return;
+    }
+
+    let index = displayedText.length;
+    // Reset if text was cleared or we are somehow ahead
+    if (index > text.length) {
+      setDisplayedText(text);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setDisplayedText((prev) => {
+        const nextLength = prev.length + 1;
+        if (nextLength >= text.length) {
+          clearInterval(timer);
+          return text;
+        }
+        return text.slice(0, nextLength);
+      });
+    }, 15); // Adjust speed here (lower = faster)
+
+    return () => clearInterval(timer);
+  }, [text, displayedText.length, isStreaming]);
+
+  // Format the currently displayed portion
+  const formatted = displayedText
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\\n/g, '<br/>')
+    .replace(/\n/g, '<br/>');
+
+  return (
+    <div className="relative inline-block">
+      <span dangerouslySetInnerHTML={{ __html: formatted }} />
+      {isStreaming && (
+        <span className="inline-block w-1.5 h-4 bg-amber-500 rounded-full ml-0.5 animate-pulse align-middle" />
+      )}
+    </div>
+  );
+};
+
 export function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Xin chào! 👋 Mình là trợ lý ảo của Việt Food. Bạn muốn tìm món ăn gì hôm nay?',
+      content: 'Xin chào! 👋 Mình là trợ lý ảo của Bếp Việt. Bạn muốn tìm món ăn gì hôm nay?',
     },
   ]);
   const [input, setInput] = useState('');
@@ -104,26 +152,48 @@ export function ChatBot() {
       if (!reader) throw new Error('No response body');
 
       let fullContent = '';
+      let networkBuffer = '';
+      let eventDataBuffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // Flush whatever is left
+          if (eventDataBuffer) {
+            fullContent += eventDataBuffer.endsWith('\n') ? eventDataBuffer.slice(0, -1) : eventDataBuffer;
+          }
+          break;
+        }
 
-        const chunk = decoder.decode(value, { stream: true });
-        // Parse SSE data lines
-        const lines = chunk.split('\n');
+        networkBuffer += decoder.decode(value, { stream: true });
+        const lines = networkBuffer.split('\n');
+        
+        // Keep the last incomplete line in the network buffer
+        networkBuffer = lines.pop() || '';
+
         for (const line of lines) {
           if (line.startsWith('data:')) {
-            const data = line.slice(5); // Remove 'data:' prefix
-            fullContent += data;
-            // Update the assistant message with accumulated content
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantId
-                  ? { ...m, content: fullContent, isStreaming: true }
-                  : m
-              )
-            );
+            let data = line.slice(5);
+            if (data.startsWith(' ')) data = data.slice(1);
+            eventDataBuffer += data + '\n';
+          } else if (line.trim() === '') {
+            // Empty line means event ends
+            if (eventDataBuffer) {
+              // Strip the final \n joined during accumulation
+              const payload = eventDataBuffer.slice(0, -1);
+              
+              if (payload !== '[DONE]') {
+                fullContent += payload;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, content: fullContent, isStreaming: true }
+                      : m
+                  )
+                );
+              }
+              eventDataBuffer = '';
+            }
           }
         }
       }
@@ -163,13 +233,6 @@ export function ChatBot() {
     setShowPulse(false);
   };
 
-  // Format markdown bold **text** to <strong> and handle newlines
-  const formatContent = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\\n/g, '<br/>') // Handle literal '\n' string from JSON/Backend
-      .replace(/\n/g, '<br/>'); // Handle actual LF
-  };
 
   return (
     <>
@@ -189,7 +252,7 @@ export function ChatBot() {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-white font-semibold text-sm">Trợ lý Việt Food</h3>
+                <h3 className="text-white font-semibold text-sm">Trợ lý Bếp Việt</h3>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
                   <span className="text-white/80 text-xs">Đang hoạt động</span>
@@ -225,14 +288,7 @@ export function ChatBot() {
                   }`}
                 >
                   {msg.role === 'assistant' ? (
-                    <div className="relative">
-                      <span
-                        dangerouslySetInnerHTML={{ __html: formatContent(msg.content) }}
-                      />
-                      {msg.isStreaming && (
-                        <span className="inline-block w-1.5 h-4 bg-amber-500 rounded-full ml-0.5 animate-pulse align-middle" />
-                      )}
-                    </div>
+                    <Typewriter text={msg.content} isStreaming={msg.isStreaming} />
                   ) : (
                     msg.content
                   )}

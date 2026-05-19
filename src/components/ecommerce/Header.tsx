@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Search, 
   ShoppingCart, 
@@ -34,6 +35,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const router = useRouter();
   
   const { cart } = useCartStore();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -76,7 +78,7 @@ export function Header() {
             </div>
             <div className="hidden sm:block">
               <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                Việt Food
+                Bếp Việt
               </span>
               <p className="text-[10px] text-muted-foreground -mt-1">Đồ ăn Việt Nam</p>
             </div>
@@ -140,22 +142,22 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => window.location.href = '/?view=profile'} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => router.push('/?view=profile')} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     Tài khoản của tôi
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.location.href = '/?view=orders'} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => router.push('/?view=orders')} className="cursor-pointer">
                     <Package className="mr-2 h-4 w-4" />
                     Đơn hàng của tôi
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.location.href = '/?view=profile&tab=liked'} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => router.push('/?view=profile&tab=liked')} className="cursor-pointer">
                     <Heart className="mr-2 h-4 w-4" />
                     Yêu thích
                   </DropdownMenuItem>
                   {user?.role === 'ADMIN' && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => window.location.href = '/?admin=dashboard'} className="cursor-pointer text-amber-600 font-medium">
+                      <DropdownMenuItem onClick={() => router.push('/?admin=dashboard')} className="cursor-pointer text-amber-600 font-medium">
                         <ShieldCheck className="mr-2 h-4 w-4" />
                         Quản trị hệ thống
                       </DropdownMenuItem>

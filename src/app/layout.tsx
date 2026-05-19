@@ -12,15 +12,15 @@ const beVietnamPro = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Việt Food - Đồ ăn Việt Nam truyền thống",
+  title: "Bếp Việt - Đồ ăn Việt Nam truyền thống",
   description: "Website thương mại điện tử bán đồ ăn Việt Nam truyền thống. Phở, bánh mì, bún chả và nhiều món ăn ngon khác.",
   keywords: ["đồ ăn Việt Nam", "phở", "bánh mì", "bún chả", "thương mại điện tử", "food delivery"],
-  authors: [{ name: "Việt Food Team" }],
+  authors: [{ name: "Bếp Việt Team" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Việt Food - Đồ ăn Việt Nam truyền thống",
+    title: "Bếp Việt - Đồ ăn Việt Nam truyền thống",
     description: "Khám phá hương vị món ăn Việt Nam truyền thống",
     type: "website",
     locale: "vi_VN",

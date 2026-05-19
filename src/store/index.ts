@@ -201,7 +201,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'vietfood-auth',
+      name: 'bepviet-auth',
       storage: createJSONStorage(() => safeStorage),
       partialize: (state) => ({ isAuthenticated: state.isAuthenticated, user: state.user }),
     }

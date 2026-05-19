@@ -107,7 +107,7 @@ export function AuthModal() {
         if (user?.role === 'ADMIN') {
           // Trigger admin mode on the home page via setAdminMode indirectly 
           // or directly if we use URL params which we are currently using
-          window.location.href = '/?admin=dashboard';
+          router.push('/?admin=dashboard');
           return; // Prevent further execution if redirecting
         }
       }

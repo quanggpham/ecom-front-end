@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +20,9 @@ import {
   Tag,
   ArrowLeft,
   ChevronRight,
-  Plus
+  Plus,
+  ShoppingCart,
+  Check
 } from 'lucide-react';
 import { useCartStore } from '@/store';
 import { ordersApi, addressApi, couponsApi, paymentsApi } from '@/lib/api';
@@ -40,6 +43,69 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
+const STEPS = [
+  { key: 'cart', label: 'Giỏ hàng', icon: ShoppingCart },
+  { key: 'checkout', label: 'Thanh toán', icon: CreditCard },
+  { key: 'done', label: 'Hoàn tất', icon: CheckCircle },
+] as const;
+
+function CheckoutProgress({ currentStep }: { currentStep: 'cart' | 'checkout' | 'done' }) {
+  const currentIdx = STEPS.findIndex(s => s.key === currentStep);
+
+  return (
+    <div className="flex items-center justify-center gap-0 w-full max-w-lg mx-auto mb-8">
+      {STEPS.map((step, idx) => {
+        const isDone = idx < currentIdx;
+        const isActive = idx === currentIdx;
+        const Icon = step.icon;
+
+        return (
+          <div key={step.key} className="flex items-center flex-1 last:flex-none">
+            {/* Step circle + label */}
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                  isDone
+                    ? 'bg-green-500 text-white shadow-sm'
+                    : isActive
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md ring-4 ring-amber-100'
+                    : 'bg-gray-100 text-gray-400'
+                }`}
+              >
+                {isDone ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+              </div>
+              <span
+                className={`text-xs font-medium whitespace-nowrap transition-colors ${
+                  isDone
+                    ? 'text-green-600'
+                    : isActive
+                    ? 'text-amber-600'
+                    : 'text-gray-400'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+
+            {/* Connector line (not after last step) */}
+            {idx < STEPS.length - 1 && (
+              <div className="flex-1 mx-2 mt-[-18px]">
+                <div className="h-[2px] rounded-full bg-gray-200 relative overflow-hidden">
+                  <div
+                    className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                      isDone ? 'w-full bg-green-400' : isActive ? 'w-1/2 bg-amber-400' : 'w-0'
+                    }`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface CheckoutProps {
   onBack: () => void;
   onSuccess: () => void;
@@ -48,6 +114,7 @@ interface CheckoutProps {
 export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   const { cart, fetchCart } = useCartStore();
   const { toast } = useToast();
+  const router = useRouter();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -292,12 +359,13 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   if (isSuccess) {
     return (
       <div className="container mx-auto px-4 py-20 mt-16 max-w-xl flex flex-col items-center text-center">
+        <CheckoutProgress currentStep="done" />
         <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
           <CheckCircle className="w-12 h-12 text-green-600" />
         </div>
         <h2 className="text-3xl font-bold mb-2 text-green-700">Đặt hàng thành công!</h2>
         <p className="text-gray-600 mb-2">
-          Cảm ơn bạn đã đặt hàng tại Việt Food.
+          Cảm ơn bạn đã đặt hàng tại Bếp Việt.
         </p>
         {orderId && (
           <p className="text-gray-800 font-medium mb-8">
@@ -308,7 +376,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
           <Button onClick={handleFinish} variant="outline" className="min-w-[140px]">
             Tiếp tục mua sắm
           </Button>
-          <Button onClick={() => window.location.href='/?view=orders'} className="bg-amber-500 hover:bg-amber-600 min-w-[140px]">
+          <Button onClick={() => router.push('/?view=orders')} className="bg-amber-500 hover:bg-amber-600 min-w-[140px]">
             Xem đơn hàng
           </Button>
         </div>
@@ -323,6 +391,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
   return (
     <div className="container mx-auto px-4 py-8 mt-16 max-w-6xl">
+      <CheckoutProgress currentStep="checkout" />
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft className="w-5 h-5" />

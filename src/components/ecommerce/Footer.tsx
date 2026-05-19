@@ -33,7 +33,7 @@ export function Footer() {
               </div>
               <div>
                 <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                  Việt Food
+                  Bếp Việt
                 </span>
                 <p className="text-[10px] text-muted-foreground -mt-1">Đồ ăn Việt Nam</p>
               </div>
@@ -111,8 +111,8 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                <a href="mailto:contact@vietfood.vn" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
-                  contact@vietfood.vn
+                <a href="mailto:contact@bepviet.vn" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
+                  contact@bepviet.vn
                 </a>
               </div>
               <div className="flex items-start gap-3">
@@ -166,7 +166,7 @@ export function Footer() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
             <p>
-              © {currentYear} Việt Food. Tất cả quyền được bảo lưu.
+              © {currentYear} Bếp Việt. Tất cả quyền được bảo lưu.
             </p>
             <p className="flex items-center gap-1">
               Made with <Heart className="w-4 h-4 fill-red-500 text-red-500 inline" /> in Vietnam

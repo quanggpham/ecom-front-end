@@ -141,7 +141,7 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
             Thực đơn
           </div> */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-            Món ăn <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">nổi bật</span>
+            Hôm nay <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">có gì?</span>
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Khám phá các món ăn Việt Nam truyền thống với hương vị đậm đà, được chế biến từ nguyên liệu tươi ngon
