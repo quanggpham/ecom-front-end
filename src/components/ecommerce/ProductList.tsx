@@ -43,7 +43,7 @@ interface ProductListProps {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState<string>('createdAt,desc');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Temporary inputs (user typing but not yet submitted/applied)
   const [searchInput, setSearchInput] = useState('');
@@ -77,7 +77,7 @@ interface ProductListProps {
     setIsLoading(true);
     try {
       const params: ProductSearchParams = {
-        page: currentPage - 1, // API uses 0-indexed pages!
+        page: currentPage,
         size: pageSize,
         sort: sortBy,
       };
@@ -126,7 +126,7 @@ interface ProductListProps {
     const handleSearch = (e: CustomEvent) => {
       setSearchInput(e.detail);
       setSearchQuery(e.detail);
-      setCurrentPage(1);
+      setCurrentPage(0);
     };
     
     window.addEventListener('search', handleSearch as EventListener);
@@ -135,7 +135,7 @@ interface ProductListProps {
 
   const handleCategoryChange = (categoryId: number | null) => {
     setSelectedCategory(categoryId);
-    setCurrentPage(1);
+    setCurrentPage(0);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -410,19 +410,19 @@ interface ProductListProps {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious 
-                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
+                      className={currentPage === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                     
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum: number;
                     if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
+                      pageNum = i;
+                    } else if (currentPage <= 2) {
+                      pageNum = i;
+                    } else if (currentPage >= totalPages - 3) {
+                      pageNum = totalPages - 5 + i;
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
@@ -434,13 +434,13 @@ interface ProductListProps {
                           isActive={currentPage === pageNum}
                           className="cursor-pointer"
                         >
-                          {pageNum}
+                          {pageNum + 1}
                         </PaginationLink>
                       </PaginationItem>
                     );
                   })}
                   
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                  {totalPages > 5 && currentPage < totalPages - 3 && (
                     <PaginationItem>
                       <PaginationEllipsis />
                     </PaginationItem>
@@ -448,8 +448,8 @@ interface ProductListProps {
                   
                   <PaginationItem>
                     <PaginationNext 
-                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
+                      className={currentPage === totalPages - 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                 </PaginationContent>

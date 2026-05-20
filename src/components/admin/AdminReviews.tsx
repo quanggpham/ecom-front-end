@@ -24,7 +24,7 @@ import type { Review } from '@/types';
 export function AdminReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   
@@ -44,7 +44,7 @@ export function AdminReviews() {
     setIsLoading(true);
     try {
       const res = await reviewsApi.getAdminReviews({
-        page: currentPage - 1,
+        page: currentPage,
         size: 10,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         sort: 'createdAt,desc',
@@ -110,7 +110,7 @@ export function AdminReviews() {
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+          <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(0); }}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
@@ -215,9 +215,9 @@ export function AdminReviews() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 pt-4">
-          <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>Trước</Button>
-          <span className="flex items-center px-4 text-sm font-medium">{currentPage} / {totalPages}</span>
-          <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>Sau</Button>
+          <Button variant="outline" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage <= 0}>Trước</Button>
+          <span className="flex items-center px-4 text-sm font-medium">{currentPage + 1} / {totalPages}</span>
+          <Button variant="outline" onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1}>Sau</Button>
         </div>
       )}
 

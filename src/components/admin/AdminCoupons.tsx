@@ -77,7 +77,7 @@ const initialForm: CouponRequest = {
 export function AdminCoupons() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
@@ -103,7 +103,7 @@ export function AdminCoupons() {
   const fetchCoupons = async () => {
     setIsLoading(true);
     try {
-      const response = await couponsApi.getAll({ page: currentPage - 1, size: pageSize, sort: 'createdAt,desc' });
+      const response = await couponsApi.getAll({ page: currentPage, size: pageSize, sort: 'createdAt,desc' });
       setCoupons(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);
@@ -398,18 +398,18 @@ export function AdminCoupons() {
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+            disabled={currentPage <= 0}
           >
             Trước
           </Button>
           <span className="flex items-center px-4">
-            {currentPage} / {totalPages}
+            {currentPage + 1} / {totalPages}
           </span>
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+            disabled={currentPage >= totalPages - 1}
           >
             Sau
           </Button>

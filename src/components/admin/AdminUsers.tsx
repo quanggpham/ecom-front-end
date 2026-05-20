@@ -73,7 +73,7 @@ const initialForm: UserFormData = {
 export function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
@@ -88,7 +88,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await usersApi.getAll({ page: currentPage - 1, size: pageSize, sort: 'createAt,desc' });
+      const response = await usersApi.getAll({ page: currentPage, size: pageSize, sort: 'createAt,desc' });
       setUsers(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);
@@ -310,19 +310,19 @@ export function AdminUsers() {
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+            disabled={currentPage <= 0}
             className="cursor-pointer"
           >
             Trước
           </Button>
           <span className="flex items-center px-4">
-            {currentPage} / {totalPages}
+            {currentPage + 1} / {totalPages}
           </span>
           <Button
             variant="outline"
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+            disabled={currentPage >= totalPages - 1}
             className="cursor-pointer"
           >
             Sau

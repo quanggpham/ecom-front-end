@@ -47,7 +47,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -79,7 +79,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
     setIsLoading(true);
     try {
       const response = await ordersApi.getMyOrders({ 
-        page: currentPage - 1, 
+        page: currentPage, 
         size: pageSize,
         sort: 'createdAt,desc',
         ...(activeTab !== 'ALL' ? { status: activeTab } : {})
@@ -123,7 +123,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
   const handleTabChange = (key: string) => {
     if (key !== activeTab) {
       setActiveTab(key);
-      setCurrentPage(1);
+      setCurrentPage(0);
     }
   };
 
@@ -457,18 +457,18 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
               <div className="flex justify-center gap-2 pt-4">
                 <Button
                   variant="outline"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                  disabled={currentPage <= 0}
                 >
                   Trước
                 </Button>
                 <span className="flex items-center px-4 text-sm text-muted-foreground">
-                  {currentPage} / {totalPages}
+                  {currentPage + 1} / {totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
+                  disabled={currentPage >= totalPages - 1}
                 >
                   Sau
                 </Button>
