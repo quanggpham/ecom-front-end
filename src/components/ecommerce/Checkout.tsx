@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,10 +22,16 @@ import {
   ChevronRight,
   Plus,
   ShoppingCart,
-  Check
+  Check,
+  Landmark,
+  QrCode,
+  Timer,
+  Copy,
+  CheckCheck
 } from 'lucide-react';
 import { useCartStore } from '@/store';
 import { ordersApi, addressApi, couponsApi, paymentsApi } from '@/lib/api';
+import type { SepayCheckoutData } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import type { PaymentMethod, Address, AddressRequest, CheckoutRequest } from '@/types';
 import {
@@ -120,6 +126,14 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // SePay state
+  const [sepayData, setSepayData] = useState<SepayCheckoutData | null>(null);
+  const [showSepayQR, setShowSepayQR] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingCountRef = useRef(0);
 
   useEffect(() => {
     try {
@@ -322,6 +336,35 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
             });
             setIsSuccess(true);
           }
+        } else if (formData.paymentMethod === 'SEPAY') {
+          try {
+            const sepayRes = await paymentsApi.createSepayCheckout(newOrderId);
+            if (sepayRes.data) {
+              setSepayData(sepayRes.data);
+              setShowSepayQR(true);
+              startPolling(newOrderId);
+            } else {
+              // Fallback: show manual transfer info
+              setSepayData({
+                bankName: '',
+                bankAccount: '',
+                accountName: '',
+                amount: total,
+                content: `DH${newOrderId}`,
+                qrUrl: '',
+                orderId: newOrderId,
+              });
+              setShowSepayQR(true);
+              startPolling(newOrderId);
+            }
+          } catch {
+            toast({
+              title: 'Lỗi',
+              description: 'Không thể tạo thông tin chuyển khoản. Đơn hàng đã được lưu, vui lòng liên hệ hỗ trợ.',
+              variant: 'destructive',
+            });
+            setIsSuccess(true);
+          }
         } else {
           setIsSuccess(true);
         }
@@ -337,7 +380,55 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     }
   };
 
+  // --- SePay Polling ---
+  const startPolling = useCallback((oid: number) => {
+    setIsPolling(true);
+    pollingCountRef.current = 0;
+    pollingRef.current = setInterval(async () => {
+      pollingCountRef.current += 1;
+      try {
+        const res = await ordersApi.getById(oid);
+        if (res.data?.status === 'CONFIRMED') {
+          // Payment confirmed!
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setIsPolling(false);
+          setShowSepayQR(false);
+          setIsSuccess(true);
+          toast({
+            title: '🎉 Thanh toán thành công!',
+            description: `Đơn hàng #${oid} đã được xác nhận thanh toán.`,
+          });
+        }
+      } catch {
+        // ignore polling errors
+      }
+      // Stop polling after 10 minutes (120 polls * 5s)
+      if (pollingCountRef.current >= 120) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setIsPolling(false);
+      }
+    }, 5000);
+  }, [toast]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  const handleCopy = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
   const handleFinish = () => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
     onSuccess();
   };
 
@@ -352,6 +443,152 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
         <Button onClick={onBack} size="lg" className="bg-amber-500 hover:bg-amber-600">
           Quay lại mua sắm
         </Button>
+      </div>
+    );
+  }
+
+  // SePay QR / Bank transfer view
+  if (showSepayQR && sepayData) {
+    return (
+      <div className="container mx-auto px-4 py-10 mt-16 max-w-2xl">
+        <CheckoutProgress currentStep="checkout" />
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Landmark className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold mb-1">Chuyển khoản ngân hàng</h2>
+            <p className="text-blue-100 text-sm">Quét QR hoặc chuyển khoản thủ công theo thông tin bên dưới</p>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* QR Code */}
+            {sepayData.qrUrl && (
+              <div className="flex justify-center">
+                <div className="bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm">
+                  <img
+                    src={sepayData.qrUrl}
+                    alt="QR chuyển khoản"
+                    className="w-56 h-56 object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Bank Details */}
+            <div className="space-y-3">
+              {sepayData.bankName && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Ngân hàng</p>
+                    <p className="font-semibold text-gray-900">{sepayData.bankName}</p>
+                  </div>
+                </div>
+              )}
+              {sepayData.bankAccount && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Số tài khoản</p>
+                    <p className="font-semibold text-gray-900 font-mono text-lg tracking-wider">{sepayData.bankAccount}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(sepayData.bankAccount, 'account')}
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                  >
+                    {copiedField === 'account' ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              )}
+              {sepayData.accountName && (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-0.5">Chủ tài khoản</p>
+                    <p className="font-semibold text-gray-900">{sepayData.accountName}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <div>
+                  <p className="text-xs text-amber-600 mb-0.5">Số tiền</p>
+                  <p className="font-bold text-amber-700 text-lg">{formatPrice(sepayData.amount)}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(String(sepayData.amount), 'amount')}
+                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                >
+                  {copiedField === 'amount' ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
+                <div>
+                  <p className="text-xs text-red-500 mb-0.5">Nội dung chuyển khoản (bắt buộc)</p>
+                  <p className="font-bold text-red-700 text-xl font-mono tracking-widest">{sepayData.content || `DH${orderId}`}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleCopy(sepayData.content || `DH${orderId}`, 'content')}
+                  className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                >
+                  {copiedField === 'content' ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Polling Status */}
+            <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              {isPolling ? (
+                <>
+                  <div className="relative">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  </div>
+                  <p className="text-blue-700 text-sm font-medium">
+                    Đang chờ xác nhận thanh toán... Hệ thống sẽ tự động cập nhật khi nhận được tiền.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Timer className="w-5 h-5 text-gray-500" />
+                  <p className="text-gray-600 text-sm">
+                    Hết thời gian chờ. Nếu đã chuyển khoản, vui lòng kiểm tra lại trong mục Đơn hàng.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Warning */}
+            <div className="text-center text-xs text-gray-500 space-y-1">
+              <p>⚠️ Vui lòng nhập <strong>chính xác</strong> nội dung chuyển khoản để đơn hàng được xác nhận tự động.</p>
+              <p>Đơn hàng sẽ tự động xác nhận trong vòng 1-2 phút sau khi chuyển khoản thành công.</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  if (pollingRef.current) clearInterval(pollingRef.current);
+                  setShowSepayQR(false);
+                  setIsSuccess(true);
+                }}
+              >
+                Đã chuyển khoản xong
+              </Button>
+              <Button
+                className="flex-1 bg-amber-500 hover:bg-amber-600"
+                onClick={() => router.push('/?view=orders')}
+              >
+                Xem đơn hàng
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -525,6 +762,24 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
                       <p className="text-xs text-muted-foreground mt-0.5">Thanh toán khi nhận hàng</p>
                     </div>
                   </div>
+                </Label>
+
+                <Label
+                  htmlFor="sepay"
+                  className={`flex items-center justify-between px-4 py-4 border rounded-xl cursor-pointer transition-all ${
+                    formData.paymentMethod === 'SEPAY' 
+                      ? 'border-amber-500 bg-amber-50/50 shadow-sm' 
+                      : 'border-gray-200 hover:border-amber-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <RadioGroupItem value="SEPAY" id="sepay" className="text-amber-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Chuyển khoản ngân hàng</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Quét QR hoặc chuyển khoản thủ công</p>
+                    </div>
+                  </div>
+                  <Landmark className="w-5 h-5 text-blue-500" />
                 </Label>
 
                 <Label

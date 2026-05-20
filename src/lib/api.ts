@@ -516,10 +516,27 @@ export type StripeCheckoutData = {
   publishableKey: string;
 };
 
+// SePay checkout response type
+export type SepayCheckoutData = {
+  bankName: string;
+  bankAccount: string;
+  accountName: string;
+  amount: number;
+  content: string;
+  qrUrl: string;
+  orderId: number;
+};
+
 // Payments API
 export const paymentsApi = {
   createStripeCheckout: async (orderId: number): Promise<ApiResponse<StripeCheckoutData>> => {
     return fetchApi<StripeCheckoutData>(`/api/v1/payments/${orderId}/stripe/checkout`, {
+      method: 'POST',
+    });
+  },
+
+  createSepayCheckout: async (orderId: number): Promise<ApiResponse<SepayCheckoutData>> => {
+    return fetchApi<SepayCheckoutData>(`/api/v1/payments/${orderId}/checkout`, {
       method: 'POST',
     });
   },

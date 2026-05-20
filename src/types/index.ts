@@ -80,7 +80,7 @@ export interface Order {
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPING' | 'COMPLETED' | 'CANCELLED';
 
-export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO' | 'STRIPE';
+export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO' | 'STRIPE' | 'SEPAY';
 
 // Auth Types
 export interface LoginRequest {
