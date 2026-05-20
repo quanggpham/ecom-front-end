@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UtensilsCrossed, Search, SlidersHorizontal } from 'lucide-react';
+import { UtensilsCrossed, Search, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -11,6 +11,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Pagination,
   PaginationContent,
@@ -30,17 +31,26 @@ import { useToast } from '@/hooks/use-toast';
 interface ProductListProps {
   initialProducts?: Product[];
   initialCategories?: Category[];
-}
-
-export function ProductList({ initialProducts, initialCategories }: ProductListProps) {
+}export function ProductList({ initialProducts, initialCategories }: ProductListProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
   const [categories, setCategories] = useState<Category[]>(initialCategories || []);
   const [isLoading, setIsLoading] = useState(!initialProducts);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Active query parameters (triggers fetchProducts when changed)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState<string>('createdAt,desc');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Temporary inputs (user typing but not yet submitted/applied)
+  const [searchInput, setSearchInput] = useState('');
+  const [minPriceInput, setMinPriceInput] = useState('');
+  const [maxPriceInput, setMaxPriceInput] = useState('');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 12;
@@ -67,17 +77,25 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
     setIsLoading(true);
     try {
       const params: ProductSearchParams = {
-        page: currentPage, // API uses 1-indexed pages
+        page: currentPage - 1, // API uses 0-indexed pages!
         size: pageSize,
         sort: sortBy,
       };
 
-      if (searchQuery) {
-        params.name = searchQuery;
+      if (searchQuery.trim()) {
+        params.name = searchQuery.trim();
       }
 
       if (selectedCategory) {
         params.categoryId = selectedCategory;
+      }
+
+      if (minPrice.trim()) {
+        params.minPrice = Number(minPrice);
+      }
+
+      if (maxPrice.trim()) {
+        params.maxPrice = Number(maxPrice);
       }
 
       const response = await productsApi.getAll(params);
@@ -95,7 +113,7 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
       setIsLoading(false);
       setIsInitialLoad(false);
     }
-  }, [currentPage, sortBy, searchQuery, selectedCategory, toast]);
+  }, [currentPage, sortBy, searchQuery, selectedCategory, minPrice, maxPrice, toast]);
 
   useEffect(() => {
     if (!initialProducts || initialProducts.length === 0) {
@@ -106,6 +124,7 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
   // Listen for search events from header
   useEffect(() => {
     const handleSearch = (e: CustomEvent) => {
+      setSearchInput(e.detail);
       setSearchQuery(e.detail);
       setCurrentPage(1);
     };
@@ -121,8 +140,26 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchQuery(searchInput);
     setCurrentPage(1);
-    fetchProducts();
+  };
+
+  const handleApplyPriceFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMinPrice(minPriceInput);
+    setMaxPrice(maxPriceInput);
+    setCurrentPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setSelectedCategory(null);
+    setMinPriceInput('');
+    setMinPrice('');
+    setMaxPriceInput('');
+    setMaxPrice('');
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
@@ -157,38 +194,153 @@ export function ProductList({ initialProducts, initialCategories }: ProductListP
             onSelectCategory={handleCategoryChange}
           />
 
-          {/* Search and Sort Row */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Tìm kiếm món ăn..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button type="submit" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-                Tìm
-              </Button>
-            </form>
+          {/* Search, Filter Toggle and Sort Row */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 flex flex-col sm:flex-row gap-3">
+              <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Tìm kiếm món ăn..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="pl-10 h-10"
+                  />
+                </div>
+                <Button type="submit" className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 h-10">
+                  Tìm
+                </Button>
+              </form>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Sắp xếp theo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="createdAt,desc">Mới nhất</SelectItem>
-                <SelectItem value="price,asc">Giá thấp đến cao</SelectItem>
-                <SelectItem value="price,desc">Giá cao đến thấp</SelectItem>
-                <SelectItem value="name,asc">Tên A-Z</SelectItem>
-                <SelectItem value="name,desc">Tên Z-A</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                  className={`flex items-center gap-2 h-10 px-4 transition-colors ${
+                    isFilterExpanded || minPrice || maxPrice
+                      ? 'border-amber-500 text-amber-600 bg-amber-50/50'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Bộ lọc</span>
+                  {(minPrice || maxPrice) && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  )}
+                </Button>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px] h-10">
+                    <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Sắp xếp theo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt,desc">Mới nhất</SelectItem>
+                    <SelectItem value="price,asc">Giá thấp đến cao</SelectItem>
+                    <SelectItem value="price,desc">Giá cao đến thấp</SelectItem>
+                    <SelectItem value="name,asc">Tên A-Z</SelectItem>
+                    <SelectItem value="name,desc">Tên Z-A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
+
+          {/* Collapsible Advanced Price Filter Panel */}
+          {isFilterExpanded && (
+            <div className="p-5 bg-white rounded-2xl border border-amber-100 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <form onSubmit={handleApplyPriceFilter} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="min-price" className="text-xs font-semibold text-gray-600">Giá tối thiểu (VND)</Label>
+                  <Input
+                    id="min-price"
+                    type="number"
+                    placeholder="Ví dụ: 20000"
+                    value={minPriceInput}
+                    onChange={(e) => setMinPriceInput(e.target.value)}
+                    className="h-10 border-gray-200 focus-visible:ring-amber-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max-price" className="text-xs font-semibold text-gray-600">Giá tối đa (VND)</Label>
+                  <Input
+                    id="max-price"
+                    type="number"
+                    placeholder="Ví dụ: 100000"
+                    value={maxPriceInput}
+                    onChange={(e) => setMaxPriceInput(e.target.value)}
+                    className="h-10 border-gray-200 focus-visible:ring-amber-500"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white h-10 shadow-sm">
+                    Áp dụng giá
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={handleClearFilters} className="text-gray-500 hover:text-gray-700 h-10">
+                    Xóa tất cả lọc
+                  </Button>
+                </div>
+              </form>
+
+              {/* Price Presets */}
+              <div className="flex flex-wrap gap-2 items-center pt-2 border-t border-gray-50">
+                <span className="text-xs font-medium text-gray-400 mr-2">Khoảng giá nhanh:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMinPriceInput('');
+                    setMaxPriceInput('50000');
+                    setMinPrice('');
+                    setMaxPrice('50000');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    !minPrice && maxPrice === '50000'
+                      ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200'
+                  }`}
+                >
+                  Dưới 50k
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMinPriceInput('50000');
+                    setMaxPriceInput('100000');
+                    setMinPrice('50000');
+                    setMaxPrice('100000');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    minPrice === '50000' && maxPrice === '100000'
+                      ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200'
+                  }`}
+                >
+                  50k - 100k
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMinPriceInput('100000');
+                    setMaxPriceInput('');
+                    setMinPrice('100000');
+                    setMaxPrice('');
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                    minPrice === '100000' && !maxPrice
+                      ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200'
+                  }`}
+                >
+                  Trên 100k
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Results Info */}

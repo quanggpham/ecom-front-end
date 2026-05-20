@@ -75,7 +75,7 @@ export function AdminOrders() {
     setIsLoading(true);
     try {
       const params: Record<string, string | number> = {
-        page: currentPage,
+        page: currentPage - 1,
         size: pageSize,
       };
       if (statusFilter !== 'all') params.status = statusFilter;

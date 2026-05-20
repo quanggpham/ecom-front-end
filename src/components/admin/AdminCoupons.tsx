@@ -107,7 +107,7 @@ export function AdminCoupons() {
   const fetchCoupons = async () => {
     setIsLoading(true);
     try {
-      const response = await couponsApi.getAll({ page: currentPage, size: pageSize });
+      const response = await couponsApi.getAll({ page: currentPage - 1, size: pageSize });
       setCoupons(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);

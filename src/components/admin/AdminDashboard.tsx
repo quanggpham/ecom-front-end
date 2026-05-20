@@ -43,7 +43,7 @@ export function AdminDashboard() {
           statisticsApi.getOverview(),
           statisticsApi.getRevenueByDate(),
           statisticsApi.getTopProducts(undefined, undefined, 5),
-          ordersApi.getAll({ page: 1, size: 5 }),
+          ordersApi.getAll({ page: 0, size: 5 }),
           productsApi.getAll({ size: 1 }),
           categoriesApi.getAll(),
         ]);

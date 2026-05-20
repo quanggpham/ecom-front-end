@@ -97,7 +97,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await usersApi.getAll({ page: currentPage, size: pageSize });
+      const response = await usersApi.getAll({ page: currentPage - 1, size: pageSize });
       setUsers(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);

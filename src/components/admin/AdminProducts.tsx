@@ -77,7 +77,7 @@ export function AdminProducts() {
     setIsLoading(true);
     try {
       const params: Record<string, string | number> = {
-        page: currentPage,
+        page: currentPage - 1,
         size: pageSize,
       };
       if (searchQuery) params.name = searchQuery;
