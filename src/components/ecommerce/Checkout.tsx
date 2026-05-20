@@ -432,7 +432,7 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
     onSuccess();
   };
 
-  if (!isSuccess && (!cart || checkoutItems.length === 0)) {
+  if (!isSuccess && !showSepayQR && (!cart || checkoutItems.length === 0)) {
     return (
       <div className="container mx-auto px-4 py-20 mt-16 max-w-4xl flex flex-col items-center text-center">
         <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
