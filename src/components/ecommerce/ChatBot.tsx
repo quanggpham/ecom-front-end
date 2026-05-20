@@ -12,7 +12,8 @@ interface Message {
   isStreaming?: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// Use relative path so requests go through Next.js rewrites (same as api.ts)
+const API_BASE_URL = '';
 
 // Typewriter component for smooth streaming effect
 const Typewriter = ({ text, isStreaming }: { text: string; isStreaming?: boolean }) => {
