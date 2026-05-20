@@ -18,7 +18,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   ShoppingCart, 
@@ -59,12 +58,17 @@ export function CartDrawer() {
     // Auto select all items when cart loads or changes items significantly
     if (cart?.items) {
       setSelectedIds(prev => {
-        const next = new Set(prev);
-        cart.items.forEach(item => next.add(item.productId));
+        const next = new Set<number>();
+        // Keep selected if it's still in the cart, or add it if it's new
+        cart.items.forEach(item => {
+          if (prev.size === 0 || prev.has(item.productId)) {
+            next.add(item.productId);
+          }
+        });
         return next;
       });
     }
-  }, [cart?.items?.length]);
+  }, [cart?.items]);
 
   const toggleItem = (productId: number) => {
     setSelectedIds(prev => {
@@ -76,7 +80,7 @@ export function CartDrawer() {
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === (cart?.items?.length || 0)) {
+    if (selectedItems.length === (cart?.items?.length || 0)) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(cart?.items?.map(i => i.productId)));
@@ -102,6 +106,11 @@ export function CartDrawer() {
   const handleRemoveItem = async (productId: number) => {
     try {
       await removeItem(productId);
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
       toast({
         title: 'Đã xóa',
         description: 'Sản phẩm đã được xóa khỏi giỏ hàng',
@@ -118,6 +127,7 @@ export function CartDrawer() {
   const handleClearCart = async () => {
     try {
       await clearCart();
+      setSelectedIds(new Set());
       toast({
         title: 'Đã xóa',
         description: 'Giỏ hàng đã được xóa',
@@ -132,7 +142,7 @@ export function CartDrawer() {
   };
 
   const handleCheckout = () => {
-    if (selectedIds.size === 0) {
+    if (selectedItems.length === 0) {
       toast({ title: 'Chưa chọn sản phẩm', description: 'Vui lòng chọn ít nhất 1 món ăn để thanh toán.', variant: 'destructive' });
       return;
     }
@@ -154,7 +164,7 @@ export function CartDrawer() {
   return (
     <>
     <Sheet open={isCartOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
+      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 h-full max-h-screen">
         {/* Header */}
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center gap-2">
@@ -219,7 +229,7 @@ export function CartDrawer() {
                 <input
                   type="checkbox"
                   className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 w-4 h-4 cursor-pointer"
-                  checked={cart?.items?.length > 0 && selectedIds.size === cart?.items?.length}
+                  checked={cart?.items?.length > 0 && selectedItems.length === cart?.items?.length}
                   onChange={toggleAll}
                   id="selectAll"
                 />
@@ -239,7 +249,7 @@ export function CartDrawer() {
             </div>
 
             {/* Cart Items */}
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200">
               <div className="p-4 space-y-4">
                 {cart.items.map((item) => (
                   <div 
@@ -331,13 +341,13 @@ export function CartDrawer() {
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <div className="border-t p-4 space-y-4 shadow-[0_-4px_10px_rgb(0,0,0,0.03)] bg-white z-10">
               {/* Total */}
               <div className="flex items-center justify-between">
-                <span className="font-medium">Tổng ({selectedIds.size} món):</span>
+                <span className="font-medium">Tổng ({selectedItems.length} món):</span>
                 <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   {formatPrice(selectedTotal)}
                 </span>
