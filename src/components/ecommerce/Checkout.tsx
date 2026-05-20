@@ -313,9 +313,6 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
 
       if (newOrderId) {
         setOrderId(newOrderId);
-        // Do not clear the whole cart, fetch the latest cart returned from backend
-        fetchCart();
-        localStorage.removeItem('checkout_selected_ids');
 
         if (formData.paymentMethod === 'STRIPE') {
           // Store order ID to poll for status in success page or retry in cancel page
@@ -323,6 +320,9 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
           try {
             const stripeRes = await paymentsApi.createStripeCheckout(newOrderId);
             if (stripeRes.data?.checkoutUrl) {
+              // Clear cart before redirect
+              fetchCart();
+              localStorage.removeItem('checkout_selected_ids');
               window.location.href = stripeRes.data.checkoutUrl;
               return; // Do not set isSuccess UI, wait for redirect
             } else {
@@ -334,6 +334,8 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
               description: 'Không thể kết nối với cổng thanh toán Stripe. Đơn hàng đã được lưu.',
               variant: 'destructive',
             });
+            fetchCart();
+            localStorage.removeItem('checkout_selected_ids');
             setIsSuccess(true);
           }
         } else if (formData.paymentMethod === 'SEPAY') {
@@ -365,7 +367,13 @@ export function Checkout({ onBack, onSuccess }: CheckoutProps) {
             });
             setIsSuccess(true);
           }
+          // Refresh cart AFTER SePay UI state is set to avoid race condition
+          fetchCart();
+          localStorage.removeItem('checkout_selected_ids');
         } else {
+          // COD - refresh cart then show success
+          fetchCart();
+          localStorage.removeItem('checkout_selected_ids');
           setIsSuccess(true);
         }
       }
