@@ -31,8 +31,9 @@ import type {
   PromotionBannerRequest,
 } from '@/types';
 
-// API Base URL - update this if needed
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// API Base URL - We use an empty string so requests go to the same domain (e.g., /api/v1/...).
+// Then next.config.ts will intercept these and "rewrite" (proxy) them to the actual backend.
+const API_BASE_URL = '';
 
 // Token management - with safe localStorage access for sandboxed environments
 export const getToken = (): string | null => {

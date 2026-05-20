@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        // Chuyển hướng các request gọi đến /api/ tới Backend
+        destination: process.env.BACKEND_URL 
+          ? `${process.env.BACKEND_URL}/api/:path*` 
+          : 'http://localhost:8080/api/:path*', 
+      },
+    ];
+  },
 };
 
 export default nextConfig;
