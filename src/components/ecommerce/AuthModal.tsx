@@ -201,12 +201,12 @@ export function AuthModal() {
       }
       closeAuthModal();
       resetForm();
-    } catch {
+    } catch (error: any) {
       toast({
         title: 'Lỗi',
         description: authMode === 'login' 
-          ? 'Email hoặc mật khẩu không đúng' 
-          : 'Không thể tạo tài khoản. Email có thể đã tồn tại.',
+          ? (error.message || 'Email hoặc mật khẩu không đúng') 
+          : (error.message || 'Không thể tạo tài khoản. Email có thể đã tồn tại.'),
         variant: 'destructive',
       });
     }

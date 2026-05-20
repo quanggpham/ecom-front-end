@@ -33,7 +33,8 @@ export default function PaymentSuccessPage() {
         attempts++;
         const res = await ordersApi.getById(orderId);
         
-        if (res.data?.status === 'CONFIRMED') {
+        const orderStatus = res.data?.status;
+        if (orderStatus === 'CONFIRMED' || orderStatus === 'SHIPPING' || orderStatus === 'COMPLETED') {
           clearInterval(interval);
           setStatus('SUCCESS');
           localStorage.removeItem('pending_stripe_order_id');
