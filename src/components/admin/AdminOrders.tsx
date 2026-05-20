@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { ordersApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { Order, OrderStatus } from '@/types';
 
@@ -77,6 +78,7 @@ export function AdminOrders() {
       const params: Record<string, string | number> = {
         page: currentPage - 1,
         size: pageSize,
+        sort: 'createdAt,desc',
       };
       if (statusFilter !== 'all') params.status = statusFilter;
 
@@ -122,16 +124,6 @@ export function AdminOrders() {
   const handleViewDetail = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailOpen(true);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const formatCurrency = (value: number) => {
@@ -248,7 +240,7 @@ export function AdminOrders() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {order.createdAt ? formatDate(order.createdAt) : '-'}
+                        {formatDateTime(order.createdAt)}
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => handleViewDetail(order)}>

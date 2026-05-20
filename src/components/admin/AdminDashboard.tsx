@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { statisticsApi, productsApi, categoriesApi, ordersApi } from '@/lib/api';
+import { formatDateOnly } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { RevenueData, TopProduct, Order } from '@/types';
 
@@ -43,8 +44,8 @@ export function AdminDashboard() {
           statisticsApi.getOverview(),
           statisticsApi.getRevenueByDate(),
           statisticsApi.getTopProducts(undefined, undefined, 5),
-          ordersApi.getAll({ page: 0, size: 5 }),
-          productsApi.getAll({ size: 1 }),
+          ordersApi.getAll({ page: 0, size: 5, sort: 'createdAt,desc' }),
+          productsApi.getAll({ page: 0, size: 1 }),
           categoriesApi.getAll(),
         ]);
 
@@ -188,7 +189,7 @@ export function AdminDashboard() {
                       style={{ height: `${(item.revenue / maxRevenue) * 180}px`, minHeight: '2px' }}
                     />
                     <span className="text-[10px] text-muted-foreground rotate-45 mt-2 origin-left whitespace-nowrap">
-                      {new Date(item.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                      {formatDateOnly(item.date, { day: '2-digit', month: '2-digit', year: undefined })}
                     </span>
                     {/* Tooltip */}
                     <div className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-[10px] p-2 rounded whitespace-nowrap z-10">
@@ -287,7 +288,7 @@ export function AdminDashboard() {
                       <div className="text-right hidden sm:block">
                         <p className="text-sm font-medium">{formatCurrency(order.totalMoney)}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                          {formatDateOnly(order.createdAt)}
                         </p>
                       </div>
                       <Badge variant="outline" className="text-[10px] uppercase font-bold px-2">

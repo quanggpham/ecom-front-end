@@ -44,21 +44,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { usersApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { User } from '@/types';
 
 const formatDate = (dateString: string) => {
-  try {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
+  return formatDateTime(dateString);
 };
 
 interface UserFormData {
@@ -97,7 +88,7 @@ export function AdminUsers() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await usersApi.getAll({ page: currentPage - 1, size: pageSize });
+      const response = await usersApi.getAll({ page: currentPage - 1, size: pageSize, sort: 'createAt,desc' });
       setUsers(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);

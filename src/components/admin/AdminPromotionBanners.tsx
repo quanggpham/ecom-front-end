@@ -88,10 +88,10 @@ export function AdminPromotionBanners() {
   const fetchBanners = async () => {
     setIsLoading(true);
     try {
-      const res = await promotionBannersApi.getAll();
+      const res = await promotionBannersApi.getAll({ sort: 'displayOrder,asc' });
       // Support both paginated and plain array responses
       const items = (res.data as any)?.items ?? (res.data as any)?.content ?? res.data ?? [];
-      setBanners(Array.isArray(items) ? items : []);
+      setBanners(Array.isArray(items) ? [...items].sort((a, b) => a.displayOrder - b.displayOrder) : []);
     } catch {
       toast({ title: 'Lỗi', description: 'Không thể tải danh sách promo banners.', variant: 'destructive' });
     } finally {

@@ -50,18 +50,14 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { couponsApi, categoriesApi, productsApi } from '@/lib/api';
+import { formatDateOnly } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, CouponRequest, DiscountType, PromotionType, Category, Product } from '@/types';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 
-const formatDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+const formatDate = (dateString: string) => formatDateOnly(dateString);
 
 const initialForm: CouponRequest = {
   code: '',
@@ -107,7 +103,7 @@ export function AdminCoupons() {
   const fetchCoupons = async () => {
     setIsLoading(true);
     try {
-      const response = await couponsApi.getAll({ page: currentPage - 1, size: pageSize });
+      const response = await couponsApi.getAll({ page: currentPage - 1, size: pageSize, sort: 'createdAt,desc' });
       setCoupons(response.data?.items || []);
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);

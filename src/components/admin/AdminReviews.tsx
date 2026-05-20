@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { reviewsApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/date';
 import type { Review } from '@/types';
 
 export function AdminReviews() {
@@ -43,9 +44,10 @@ export function AdminReviews() {
     setIsLoading(true);
     try {
       const res = await reviewsApi.getAdminReviews({
-        page: currentPage,
+        page: currentPage - 1,
         size: 10,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
+        sort: 'createdAt,desc',
       });
       setReviews(res.data?.items || []);
       setTotalPages(res.data?.totalPages || 1);
@@ -146,7 +148,7 @@ export function AdminReviews() {
                           <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-muted text-muted-foreground/30'}`} />
                         ))}
                         <span className="ml-2 text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleString('vi-VN')}
+                          {formatDateTime(review.createdAt)}
                         </span>
                       </div>
                       <p className="text-sm rounded-lg bg-muted/50 p-3 mb-3 border">

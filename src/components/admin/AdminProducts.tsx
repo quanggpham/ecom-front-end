@@ -79,6 +79,7 @@ export function AdminProducts() {
       const params: Record<string, string | number> = {
         page: currentPage - 1,
         size: pageSize,
+        sort: 'createdAt,desc',
       };
       if (searchQuery) params.name = searchQuery;
       if (selectedCategory !== 'all') params.categoryId = selectedCategory;

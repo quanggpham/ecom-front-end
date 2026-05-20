@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { ordersApi, reviewsApi } from '@/lib/api';
+import { formatDateTime } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { Order, ReviewableOrder } from '@/types';
 import { CreateReviewModal } from '@/components/ecommerce/CreateReviewModal';
@@ -78,8 +79,9 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
     setIsLoading(true);
     try {
       const response = await ordersApi.getMyOrders({ 
-        page: currentPage, 
+        page: currentPage - 1, 
         size: pageSize,
+        sort: 'createdAt,desc',
         ...(activeTab !== 'ALL' ? { status: activeTab } : {})
       });
       setOrders(response.data?.items || []);
@@ -158,16 +160,6 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
     } finally {
       setCancellingId(null);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const formatCurrency = (value: number) => {
@@ -263,7 +255,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
                       {/* Info */}
                       <div>
                         <div className="font-semibold text-lg">{item.productName}</div>
-                        <div className="text-sm text-muted-foreground mt-1">Đơn hàng #{order.orderId} • {formatDate(order.createdAt)}</div>
+                        <div className="text-sm text-muted-foreground mt-1">Đơn hàng #{order.orderId} • {formatDateTime(order.createdAt, { month: 'long' })}</div>
                         <div className="text-sm text-muted-foreground">Số lượng: {item.quantity}</div>
                       </div>
                     </div>
@@ -329,7 +321,7 @@ export function OrderHistory({ onBack }: OrderHistoryProps) {
                           </Badge>
                           {order.createdAt && (
                             <span className="text-xs text-muted-foreground">
-                              {formatDate(order.createdAt)}
+                              {formatDateTime(order.createdAt, { month: 'long' })}
                             </span>
                           )}
                         </div>

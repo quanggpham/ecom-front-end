@@ -50,6 +50,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { bannersApi, mediaApi } from '@/lib/api';
+import { formatDateOnly } from '@/lib/date';
 import { useToast } from '@/hooks/use-toast';
 import type { Banner, BannerRequest, BadgeIcon } from '@/types';
 
@@ -90,12 +91,7 @@ const INITIAL_FORM: BannerRequest = {
 };
 
 const formatDate = (dateString: string | null) => {
-  if (!dateString) return '—';
-  return new Date(dateString).toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return formatDateOnly(dateString, { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 // ─── Mini Preview ─────────────────────────────────────────────────────────
@@ -155,7 +151,7 @@ export function AdminBanners() {
   const fetchBanners = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await bannersApi.getAll({ page: currentPage - 1, size: pageSize });
+      const res = await bannersApi.getAll({ page: currentPage - 1, size: pageSize, sort: 'displayOrder,asc' });
       setBanners(res.data?.items || []);
       setTotalPages(res.data?.totalPages || 1);
       setTotalElements(res.data?.totalElements || 0);
@@ -374,7 +370,6 @@ export function AdminBanners() {
                       <TableCell>
                         <div className="w-[72px] h-10 rounded overflow-hidden border border-border bg-muted flex-shrink-0">
                           {banner.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={banner.imageUrl}
                               alt={banner.title}

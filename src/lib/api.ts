@@ -362,7 +362,7 @@ export const ordersApi = {
     });
   },
 
-  getMyOrders: async (params?: { page?: number; size?: number; status?: string }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  getMyOrders: async (params?: { page?: number; size?: number; status?: string; sort?: string }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -387,7 +387,7 @@ export const ordersApi = {
   },
 
   // Admin endpoints
-  getAll: async (params?: { page?: number; size?: number; status?: string }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
+  getAll: async (params?: { page?: number; size?: number; status?: string; sort?: string }): Promise<ApiResponse<PaginatedResponse<Order>>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -411,11 +411,12 @@ export const ordersApi = {
 
 // Users API
 export const usersApi = {
-  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<User>>> => {
+  getAll: async (params?: { page?: number; size?: number; sort?: string }): Promise<ApiResponse<PaginatedResponse<User>>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       if (params.page !== undefined) searchParams.append('page', String(params.page));
       if (params.size !== undefined) searchParams.append('size', String(params.size));
+      if (params.sort) searchParams.append('sort', params.sort);
     }
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/api/v1/users?${queryString}` : '/api/v1/users';
@@ -449,7 +450,7 @@ export const usersApi = {
 
 // Coupons API
 export const couponsApi = {
-  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<Coupon>>> => {
+  getAll: async (params?: { page?: number; size?: number; sort?: string }): Promise<ApiResponse<PaginatedResponse<Coupon>>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -697,10 +698,11 @@ export const bannersApi = {
   },
 
   // Admin — lấy tất cả banner (kể cả inactive), có phân trang
-  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<Banner>>> => {
+  getAll: async (params?: { page?: number; size?: number; sort?: string }): Promise<ApiResponse<PaginatedResponse<Banner>>> => {
     const searchParams = new URLSearchParams();
     if (params?.page !== undefined) searchParams.append('page', String(params.page));
     if (params?.size !== undefined) searchParams.append('size', String(params.size));
+    if (params?.sort) searchParams.append('sort', params.sort);
     const q = searchParams.toString();
     return fetchApi<PaginatedResponse<Banner>>(q ? `/api/v1/admin/banners?${q}` : '/api/v1/admin/banners');
   },
@@ -749,10 +751,11 @@ export const promotionBannersApi = {
   },
 
   // Admin — tất cả banner, có phân trang
-  getAll: async (params?: { page?: number; size?: number }): Promise<ApiResponse<PaginatedResponse<PromotionBanner>>> => {
+  getAll: async (params?: { page?: number; size?: number; sort?: string }): Promise<ApiResponse<PaginatedResponse<PromotionBanner>>> => {
     const searchParams = new URLSearchParams();
     if (params?.page !== undefined) searchParams.append('page', String(params.page));
     if (params?.size !== undefined) searchParams.append('size', String(params.size));
+    if (params?.sort) searchParams.append('sort', params.sort);
     const q = searchParams.toString();
     return fetchApi<PaginatedResponse<PromotionBanner>>(q ? `/api/v1/admin/promotion-banners?${q}` : '/api/v1/admin/promotion-banners');
   },
