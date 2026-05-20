@@ -151,6 +151,20 @@ export const authApi = {
       return 'USER';
     }
   },
+  
+  forgotPassword: async (email: string): Promise<ApiResponse<any>> => {
+    return fetchApi<any>('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (email: string, code: string, newPassword: string): Promise<ApiResponse<any>> => {
+    return fetchApi<any>('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, newPassword }),
+    });
+  },
 };
 
 // Profile API
