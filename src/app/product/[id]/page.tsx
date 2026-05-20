@@ -188,9 +188,9 @@ export default function ProductDetailPage() {
   }
 
   // Use product-level stats as immediate defaults; reviewsData refines once loaded
-  const ratingNum = reviewsData?.stats?.avgRating ?? product.avgRating ?? 0;
+  const ratingNum = Number(reviewsData?.stats?.avgRating ?? product.avgRating ?? 0);
   const rating = ratingNum.toFixed(1);
-  const count = reviewsData?.stats?.totalReviews ?? product.totalReviews ?? 0;
+  const count = Number(reviewsData?.stats?.totalReviews ?? product.totalReviews ?? 0);
   const userReview = reviewsData?.reviews.items.find(r => r.userId === userProfile?.id);
   const reviewableItemIds = Array.from(reviewableItems);
   const hasReviewable = reviewableItemIds.length > 0;

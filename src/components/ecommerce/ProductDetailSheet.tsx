@@ -59,8 +59,8 @@ export function ProductDetailSheet() {
   if (!selectedProduct) return null;
 
   const product = selectedProduct;
-  const rating = (product.avgRating ?? 0).toFixed(1);
-  const count = product.totalReviews ?? 0;
+  const rating = Number(product.avgRating ?? 0).toFixed(1);
+  const count = Number(product.totalReviews ?? 0);
   const { time, calories } = getProductExtras(product.id);
 
   const handleAddToCart = async () => {

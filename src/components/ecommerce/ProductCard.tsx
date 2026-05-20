@@ -37,8 +37,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
 
   const [ratingStats, setRatingStats] = useState({
-    rating: (product.avgRating || 0).toFixed(1),
-    count: product.totalReviews || 0
+    rating: Number(product.avgRating || 0).toFixed(1),
+    count: Number(product.totalReviews || 0)
   });
 
   useEffect(() => {
@@ -49,8 +49,8 @@ export function ProductCard({ product }: ProductCardProps) {
           const res = await reviewsApi.getByProduct(product.id, { size: 1 });
           if (res.data?.stats) {
             setRatingStats({
-              rating: res.data.stats.avgRating.toFixed(1),
-              count: res.data.stats.totalReviews
+              rating: Number(res.data.stats.avgRating || 0).toFixed(1),
+              count: Number(res.data.stats.totalReviews || 0)
             });
           }
         } catch {
