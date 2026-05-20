@@ -33,11 +33,9 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-// Generate consistent rating based on product id
-function getProductRating(id: number): { rating: string; count: number; time: number; calories: number } {
+// Generate pseudo prep time / calories based on product id (backend doesn't provide these)
+function getProductExtras(id: number): { time: number; calories: number } {
   return {
-    rating: (3.5 + (id % 15) / 10).toFixed(1),
-    count: 50 + (id * 7) % 200,
     time: 10 + (id * 3) % 20,
     calories: 200 + (id * 47) % 300,
   };
@@ -61,7 +59,9 @@ export function ProductDetailSheet() {
   if (!selectedProduct) return null;
 
   const product = selectedProduct;
-  const { rating, count, time, calories } = getProductRating(product.id);
+  const rating = (product.avgRating ?? 0).toFixed(1);
+  const count = product.totalReviews ?? 0;
+  const { time, calories } = getProductExtras(product.id);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {

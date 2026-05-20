@@ -187,9 +187,10 @@ export default function ProductDetailPage() {
     );
   }
 
-  const rating = reviewsData?.stats?.avgRating?.toFixed(1) || '0.0';
-  const count = reviewsData?.stats?.totalReviews || 0;
-  const ratingNum = reviewsData?.stats?.avgRating || 0;
+  // Use product-level stats as immediate defaults; reviewsData refines once loaded
+  const ratingNum = reviewsData?.stats?.avgRating ?? product.avgRating ?? 0;
+  const rating = ratingNum.toFixed(1);
+  const count = reviewsData?.stats?.totalReviews ?? product.totalReviews ?? 0;
   const userReview = reviewsData?.reviews.items.find(r => r.userId === userProfile?.id);
   const reviewableItemIds = Array.from(reviewableItems);
   const hasReviewable = reviewableItemIds.length > 0;
