@@ -103,12 +103,12 @@ interface ProductListProps {
       setTotalPages(response.data?.totalPages || 1);
       setTotalElements(response.data?.totalElements || 0);
     } catch (error) {
-      console.error('Failed to fetch products:', error);
-      toast({
-        title: 'Lỗi',
-        description: 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.',
-        variant: 'destructive',
-      });
+      // console.error('Failed to fetch products:', error);
+      // toast({
+      //   title: 'Lỗi',
+      //   description: 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.',
+      //   variant: 'destructive',
+      // });
     } finally {
       setIsLoading(false);
       setIsInitialLoad(false);
