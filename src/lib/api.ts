@@ -29,6 +29,7 @@ import type {
   BannerRequest,
   PromotionBanner,
   PromotionBannerRequest,
+  ImportExcelResult,
 } from '@/types';
 
 // API Base URL - We use an empty string so requests go to the same domain (e.g., /api/v1/...).

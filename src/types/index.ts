@@ -185,6 +185,22 @@ export interface ProductSearchParams {
   sort?: string;
 }
 
+// Import Excel Types
+export interface ImportExcelResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: string[];
+}
+
+// Import Excel Types
+export interface ImportExcelResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: string[];
+}
+
 // Coupon Types
 export type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';
 export type PromotionType = 'ORDER' | 'CATEGORY' | 'PRODUCT';

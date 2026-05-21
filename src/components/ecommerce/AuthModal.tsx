@@ -564,27 +564,6 @@ export function AuthModal() {
               {authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
             </Button>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Hoặc</span>
-              </div>
-            </div>
-
-            {/* Social Login */}
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full"
-              onClick={() => toast({ title: 'Tính năng đang phát triển', duration: 1500 })}
-            >
-              <Chrome className="w-4 h-4 mr-2" />
-              Tiếp tục với Google
-            </Button>
-
             {/* Switch Mode */}
             <div className="text-center text-sm">
               <span className="text-muted-foreground">
