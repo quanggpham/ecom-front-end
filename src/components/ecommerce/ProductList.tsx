@@ -141,14 +141,14 @@ interface ProductListProps {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(searchInput);
-    setCurrentPage(1);
+    setCurrentPage(0);
   };
 
   const handleApplyPriceFilter = (e: React.FormEvent) => {
     e.preventDefault();
     setMinPrice(minPriceInput);
     setMaxPrice(maxPriceInput);
-    setCurrentPage(1);
+    setCurrentPage(0);
   };
 
   const handleClearFilters = () => {
@@ -159,7 +159,7 @@ interface ProductListProps {
     setMinPrice('');
     setMaxPriceInput('');
     setMaxPrice('');
-    setCurrentPage(1);
+    setCurrentPage(0);
   };
 
   const handlePageChange = (page: number) => {
@@ -294,7 +294,7 @@ interface ProductListProps {
                     setMaxPriceInput('50000');
                     setMinPrice('');
                     setMaxPrice('50000');
-                    setCurrentPage(1);
+                    setCurrentPage(0);
                   }}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     !minPrice && maxPrice === '50000'
@@ -311,7 +311,7 @@ interface ProductListProps {
                     setMaxPriceInput('100000');
                     setMinPrice('50000');
                     setMaxPrice('100000');
-                    setCurrentPage(1);
+                    setCurrentPage(0);
                   }}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     minPrice === '50000' && maxPrice === '100000'
@@ -328,7 +328,7 @@ interface ProductListProps {
                     setMaxPriceInput('');
                     setMinPrice('100000');
                     setMaxPrice('');
-                    setCurrentPage(1);
+                    setCurrentPage(0);
                   }}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     minPrice === '100000' && !maxPrice
