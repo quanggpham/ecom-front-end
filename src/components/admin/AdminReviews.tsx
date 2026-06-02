@@ -6,7 +6,6 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -135,18 +134,12 @@ export function AdminReviews() {
                     </div>
 
                     {/* ACTIONS */}
-                    <div className="md:w-48 shrink-0 flex flex-col items-end gap-3 justify-between">
-                      <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
-                        Công khai
-                      </Badge>
-                      
-                      <div className="flex flex-col gap-2 w-full mt-4">
-                        {!review.sellerReply && (
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedReview(review); setIsReplyOpen(true); }} className="w-full text-amber-600 hover:bg-amber-50 border-amber-200">
-                            <MessageSquare className="w-4 h-4 mr-2" /> Trả lời
-                          </Button>
-                        )}
-                      </div>
+                    <div className="md:w-32 shrink-0 flex flex-col items-end justify-start">
+                      {!review.sellerReply && (
+                        <Button size="sm" variant="outline" onClick={() => { setSelectedReview(review); setIsReplyOpen(true); }} className="w-full text-amber-600 hover:bg-amber-50 border-amber-200">
+                          <MessageSquare className="w-4 h-4 mr-2" /> Trả lời
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
