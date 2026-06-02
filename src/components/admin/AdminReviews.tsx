@@ -3,16 +3,10 @@
 import { useState, useEffect } from 'react';
 import {
   Star,
-  Search,
-  CheckCircle,
-  XCircle,
   MessageSquare,
-  MoreVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,12 +22,8 @@ export function AdminReviews() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   
-  // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [searchTerm, setSearchTerm] = useState(''); // Just a local state, we can use it to filter products if we want
-  
   // Modals
-  const [actionModal, setActionModal] = useState<'REJECT' | 'REPLY' | null>(null);
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [modalText, setModalText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +36,6 @@ export function AdminReviews() {
       const res = await reviewsApi.getAdminReviews({
         page: currentPage,
         size: 10,
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
         sort: 'createdAt,desc',
       });
       setReviews(res.data?.items || []);
@@ -61,17 +50,7 @@ export function AdminReviews() {
 
   useEffect(() => {
     fetchReviews();
-  }, [currentPage, statusFilter]);
-
-  const handleApprove = async (id: number) => {
-    try {
-      await reviewsApi.updateStatus(id, 'APPROVED');
-      toast({ title: 'Thành công', description: 'Đã duyệt đánh giá' });
-      fetchReviews();
-    } catch {
-      toast({ title: 'Lỗi', description: 'Không thể duyệt đánh giá', variant: 'destructive' });
-    }
-  };
+  }, [currentPage]);
 
   const handleModalSubmit = async () => {
     if (!selectedReview) return;
@@ -82,14 +61,9 @@ export function AdminReviews() {
 
     setIsSubmitting(true);
     try {
-      if (actionModal === 'REJECT') {
-        await reviewsApi.updateStatus(selectedReview.id, 'REJECTED', modalText.trim());
-        toast({ title: 'Thành công', description: 'Đã từ chối đánh giá' });
-      } else if (actionModal === 'REPLY') {
-        await reviewsApi.replyAsSeller(selectedReview.id, modalText.trim());
-        toast({ title: 'Thành công', description: 'Đã phản hồi đánh giá' });
-      }
-      setActionModal(null);
+      await reviewsApi.replyAsSeller(selectedReview.id, modalText.trim());
+      toast({ title: 'Thành công', description: 'Đã phản hồi đánh giá' });
+      setIsReplyOpen(false);
       setModalText('');
       fetchReviews();
     } catch {
@@ -101,26 +75,13 @@ export function AdminReviews() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Filters */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <h1 className="text-2xl font-bold">Quản lý Đánh giá</h1>
           <p className="text-muted-foreground text-sm">
             {totalElements} đánh giá trong hệ thống
           </p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(0); }}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Tất cả</SelectItem>
-              <SelectItem value="PENDING">Chờ duyệt</SelectItem>
-              <SelectItem value="APPROVED">Đã duyệt</SelectItem>
-              <SelectItem value="REJECTED">Từ chối</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -175,30 +136,13 @@ export function AdminReviews() {
 
                     {/* ACTIONS */}
                     <div className="md:w-48 shrink-0 flex flex-col items-end gap-3 justify-between">
-                      <Badge variant={
-                        review.status === 'APPROVED' ? 'default' :
-                        review.status === 'PENDING' ? 'secondary' : 'destructive'
-                      } className={
-                        review.status === 'APPROVED' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
-                        review.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100' : ''
-                      }>
-                        {review.status === 'APPROVED' ? 'Đã duyệt' :
-                         review.status === 'PENDING' ? 'Chờ duyệt' : 'Từ chối'}
+                      <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
+                        Công khai
                       </Badge>
                       
                       <div className="flex flex-col gap-2 w-full mt-4">
-                        {review.status === 'PENDING' && (
-                          <>
-                            <Button size="sm" onClick={() => handleApprove(review.id)} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                              <CheckCircle className="w-4 h-4 mr-2" /> Duyệt
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedReview(review); setActionModal('REJECT'); }} className="w-full text-red-600 hover:bg-red-50">
-                              <XCircle className="w-4 h-4 mr-2" /> Từ chối
-                            </Button>
-                          </>
-                        )}
-                        {review.status === 'APPROVED' && !review.sellerReply && (
-                          <Button size="sm" variant="outline" onClick={() => { setSelectedReview(review); setActionModal('REPLY'); }} className="w-full text-amber-600 hover:bg-amber-50 border-amber-200">
+                        {!review.sellerReply && (
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedReview(review); setIsReplyOpen(true); }} className="w-full text-amber-600 hover:bg-amber-50 border-amber-200">
                             <MessageSquare className="w-4 h-4 mr-2" /> Trả lời
                           </Button>
                         )}
@@ -221,31 +165,29 @@ export function AdminReviews() {
         </div>
       )}
 
-      {/* Action Modal (Reject / Reply) */}
-      <Dialog open={!!actionModal} onOpenChange={(open) => { if (!open) setActionModal(null); }}>
+      {/* Action Modal (Reply) */}
+      <Dialog open={isReplyOpen} onOpenChange={(open) => { if (!open) setIsReplyOpen(false); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {actionModal === 'REJECT' ? 'Từ chối đánh giá' : 'Phản hồi đánh giá'}
-            </DialogTitle>
+            <DialogTitle>Phản hồi đánh giá</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
                Cho đánh giá của: <span className="font-semibold text-foreground">{selectedReview?.userName}</span>
             </p>
             <Textarea 
-              placeholder={actionModal === 'REJECT' ? 'Nhập lý do từ chối (bắt buộc)...' : 'Nhập nội dung phản hồi...'}
+              placeholder="Nhập nội dung phản hồi..."
               value={modalText}
               onChange={(e) => setModalText(e.target.value)}
               className="min-h-[100px]"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActionModal(null)} disabled={isSubmitting}>Hủy</Button>
+            <Button variant="outline" onClick={() => setIsReplyOpen(false)} disabled={isSubmitting}>Hủy</Button>
             <Button 
               onClick={handleModalSubmit} 
               disabled={isSubmitting}
-              className={actionModal === 'REJECT' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'}
+              className="bg-amber-600 hover:bg-amber-700"
             >
               {isSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
             </Button>
